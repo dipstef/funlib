@@ -3,27 +3,20 @@ from funlib import call_string
 from funlib.util import call_string
 
 
-class FunctionName(object):
+class Function(object):
 
-    def __init__(self, name):
-        self._name = name
+    def __init__(self, fun):
+        self._fun = fun
 
     @property
     def __name__(self):
-        return self._name
-
-
-class Function(FunctionName):
-
-    def __init__(self, fun, name=None):
-        super(Function, self).__init__(name or fun.__name__)
-        self._fun = fun
+        return self._fun.__name__
 
     def __call__(self, *args, **kwargs):
         return self._fun(*args, **kwargs)
 
     def __str__(self):
-        return encoded(self._name)
+        return encoded(self.__name__)
 
     def __unicode__(self):
         return decoded(str(self))
@@ -31,8 +24,8 @@ class Function(FunctionName):
 
 class FunctionCall(Function):
 
-    def __init__(self, fun, name=None):
-        super(FunctionCall, self).__init__(fun, name)
+    def __init__(self, fun):
+        super(FunctionCall, self).__init__(fun)
         self._last_call = None
 
     def __call__(self, *args, **kwargs):
