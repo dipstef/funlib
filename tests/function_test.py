@@ -1,6 +1,6 @@
 # coding=utf-8
 from unicoder.text import encoded, decoded
-from funlib.function import LambdaFunction
+from funlib import LambdaFunction
 from funlib.util import call_string
 
 

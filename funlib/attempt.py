@@ -1,7 +1,7 @@
 import functools
 import sys
 
-from .function import FunctionCall, LambdaFunction
+from . import FunctionCall, LambdaFunction
 
 
 class FunctionAttempt(object):
