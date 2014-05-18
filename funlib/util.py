@@ -1,4 +1,4 @@
-from unicoder.text import byte_string
+from unicoder import byte_string
 
 
 def call_string(fun_name, *args, **kwargs):

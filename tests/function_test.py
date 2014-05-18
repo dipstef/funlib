@@ -1,5 +1,5 @@
 # coding=utf-8
-from unicoder.text import encoded, decoded
+from unicoder import encoded, decoded
 from funlib import LambdaFunction
 from funlib.util import call_string
 
