@@ -97,8 +97,8 @@ def retry_function(max_times, callback=None, err_callback=None):
     def fun_retry(fun):
         @functools.wraps(fun)
         def wrapping(*args, **kwargs):
-            callback_fun = callback or kwargs.pop('callback')
-            err_callback_fun = err_callback or kwargs.pop('err_callback')
+            callback_fun = callback or kwargs.pop('callback', None)
+            err_callback_fun = err_callback or kwargs.pop('err_callback', None)
 
             retry = FunctionRetry(fun, ExecuteMaxTimes(max_times, callback_fun, err_callback_fun))
 
