@@ -39,6 +39,7 @@ settings.update(
     keywords='decorator decorators exceptions exception handling retry retrying exponential backoff memoization '
              'caching timeout function',
     packages=['funlib', 'funlib.retry'],
+    requires=['catches'],
     test_suite='tests'
 )
 
