@@ -5,11 +5,13 @@ from .error import TimeoutError
 
 
 def timeout(seconds, error_message='Function call timed out'):
+
     def decorated(func):
         def _handle_timeout(signum, frame):
             raise TimeoutError(error_message)
 
-        def wrapper(*args, **kwargs):
+        @functools.wraps(func)
+        def timeout_execute(*args, **kwargs):
             signal.signal(signal.SIGALRM, _handle_timeout)
             signal.alarm(seconds)
             try:
@@ -18,7 +20,7 @@ def timeout(seconds, error_message='Function call timed out'):
                 signal.alarm(0)
             return result
 
-        return functools.wraps(func)(wrapper)
+        return timeout_execute
 
     return decorated
 

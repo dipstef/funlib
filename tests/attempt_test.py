@@ -1,4 +1,4 @@
-from funlib.attempt import retry_function
+from funlib.retry import retry_function
 
 
 def main():
@@ -7,7 +7,7 @@ def main():
 
     attempts = []
 
-    @retry_function(max_times=10, callback=_print_attempt, err_callback=_print_attempt)
+    @retry_function(times=10, err_callback=_print_attempt)
     def test(i):
         attempts.append(i)
         attempted = len(attempts)
@@ -17,7 +17,7 @@ def main():
 
         return i
 
-    test(1)
+    assert test(1) == 1
 
 if __name__ == '__main__':
     main()

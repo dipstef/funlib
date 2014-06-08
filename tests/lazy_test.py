@@ -34,7 +34,6 @@ def main():
     a = A()
     print a.foo(1, 2)
 
-
     @memoized
     def fibonacci(n):
         print 'Computing', n
