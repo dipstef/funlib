@@ -43,7 +43,7 @@ class ErrorsRetries(FunctionRetryBase):
         result_check = checks.pop('result_check', None)
         super(ErrorsRetries, self).__init__(fun, result_check)
 
-        errors = errors or [(BaseException,)]
+        errors = errors or [(Exception,)]
         self._error_handlers = ErrorClasses(*errors)
         self._error_classes = self._error_handlers.classes
 
@@ -55,14 +55,14 @@ class FunctionRetry(FunctionRetryBase):
 
     def __init__(self, fun, result_check=None, on_err=None, errors=None):
         super(FunctionRetry, self).__init__(fun, result_check)
-        self._error_classes = errors or (BaseException,)
+        self._error_classes = errors or (Exception,)
         self._errors_callback = on_err
 
     def _get_err_callback(self, error):
         return self._errors_callback
 
 
-def retry(times, on_err=None, sleep=None, result_check=None, errors=(BaseException, )):
+def retry(times, on_err=None, sleep=None, result_check=None, errors=(Exception, )):
 
     def fun_retry(fun):
         @functools.wraps(fun)
