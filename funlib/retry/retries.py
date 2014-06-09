@@ -27,5 +27,5 @@ class StopAfterMaxTimes(FailedAttemptRetries):
         return failed_attempt.number == self._max_attempts
 
 
-def try_times(times, err_callback=None, sleep=None):
-    return StopAfterMaxTimes(times, err_callback, sleep)
+def try_times(times, on_err=None, sleep=None):
+    return StopAfterMaxTimes(times, on_err, sleep)

@@ -1,3 +1,4 @@
+import random
 import time
 
 
@@ -27,6 +28,11 @@ class SleepIncrement(Sleep):
         raise NotImplementedError
 
 
+class RandomSleep(SleepIncrement):
+    def _increment_sleep(self, function_call_error):
+        return random.randint(self._seconds, self._max_sleep)
+
+
 class SleepPenalty(SleepIncrement):
 
     def __init__(self, seconds, penalty, max_sleep=None):
@@ -48,3 +54,7 @@ class ExponentialSleep(SleepIncrement):
 
 def sleep(seconds):
     return Sleep(seconds)
+
+
+def random_sleep(from_seconds, to):
+    return RandomSleep(from_seconds, to)

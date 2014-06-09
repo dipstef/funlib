@@ -8,7 +8,8 @@ attempt = namedtuple('attempt', ['call_time', 'end_time', 'result', 'error'])
 
 class CallAttempt(object):
 
-    def __init__(self, number, start_time, call_time, end_time):
+    def __init__(self, fun_call, number, start_time, call_time, end_time):
+        self.call = fun_call
         self.number = number
         self.start_time = start_time
         self.call_time = call_time
@@ -18,29 +19,30 @@ class CallAttempt(object):
     def attempted(self):
         return self.end_time - self.start_time
 
+    def __str__(self):
+        return str(self.call)
+
 
 class CompletedAttempt(CallAttempt):
 
     def __init__(self, fun_call, result, number, start_time, call_time, end_time):
-        super(CompletedAttempt, self).__init__(number, start_time, call_time, end_time)
+        super(CompletedAttempt, self).__init__(fun_call, number, start_time, call_time, end_time)
         self.result = result
         self.error = None
-        self._fun_call = fun_call
 
     def outcome(self):
         return self.result
 
     def __str__(self):
-        return '%s = %s' % (str(self._fun_call), self.result)
+        return '%s = %s' % (str(self.call), self.result)
 
 
 class FailedAttempt(CallAttempt):
 
     def __init__(self, fun_call, error, number, start_time, call_time, end_time):
-        super(FailedAttempt, self).__init__(number, start_time, call_time, end_time)
+        super(FailedAttempt, self).__init__(fun_call, number, start_time, call_time, end_time)
         self.result = None
         self.error = error
-        self._fun_call = fun_call
 
     def outcome(self):
         self.raise_cause()
@@ -49,7 +51,7 @@ class FailedAttempt(CallAttempt):
         raise self.error, None, sys.exc_info()[2]
 
     def __str__(self):
-        return '%s Failed: %s: %s' % (str(self._fun_call), self.number, self.error.__class__.__name__)
+        return '%s Failed: %s: %s' % (str(self.call), self.number, self.error.__class__.__name__)
 
 
 class Attempt(Function):

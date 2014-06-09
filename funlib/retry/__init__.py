@@ -3,7 +3,7 @@ import functools
 from .. import FunctionCall
 from .attempt import Attempt
 from .retries import try_times
-from .error import ErrorClasses
+from .errors import ErrorClasses
 
 
 class FunctionRetryBase(FunctionCall):
@@ -28,43 +28,62 @@ class FunctionRetryBase(FunctionCall):
         return not self._result_check or self._result_check(result)
 
     def _err_callback(self, failed_attempt):
-        error_callback = self._get_callback(failed_attempt.error)
+        error_callback = self._get_err_callback(failed_attempt.error)
 
         if error_callback:
             error_callback(failed_attempt)
 
-    def _get_callback(self, error):
-        return None
+    def _get_err_callback(self, error):
+        raise NotImplementedError
 
 
-class GroupedRetry(FunctionRetryBase):
+class ErrorsRetries(FunctionRetryBase):
 
-    def __init__(self, fun, result_check=None, *errors):
-        super(GroupedRetry, self).__init__(fun, result_check)
+    def __init__(self, fun, *errors, **checks):
+        result_check = checks.pop('result_check', None)
+        super(ErrorsRetries, self).__init__(fun, result_check)
 
         errors = errors or [(BaseException,)]
         self._error_handlers = ErrorClasses(*errors)
         self._error_classes = self._error_handlers.classes
 
-    def _get_callback(self, error):
+    def _get_err_callback(self, error):
         return self._error_handlers.get(error.__class__)
 
 
-class FunctionRetry(GroupedRetry):
+class FunctionRetry(FunctionRetryBase):
 
-    def __init__(self, fun, result_check=None, err_callback=None, on_errors=None):
-        on_errors = on_errors or (BaseException, )
-        super(FunctionRetry, self).__init__(fun, result_check, (on_errors, err_callback))
+    def __init__(self, fun, result_check=None, on_err=None, errors=None):
+        super(FunctionRetry, self).__init__(fun, result_check)
+        self._error_classes = errors or (BaseException,)
+        self._errors_callback = on_err
+
+    def _get_err_callback(self, error):
+        return self._errors_callback
 
 
-def retry_function(times, err_callback=None, sleep=None, result_check=None):
+def retry(times, on_err=None, sleep=None, result_check=None, errors=(BaseException, )):
 
     def fun_retry(fun):
         @functools.wraps(fun)
         def retry_call(*args, **kwargs):
-            err_fun = err_callback or kwargs.pop('err_callback', None)
+            err_fun = on_err or kwargs.pop('on_err', None)
 
-            retry = FunctionRetry(fun, err_callback=try_times(times, err_fun, sleep=sleep), result_check=result_check)
+            handler = try_times(times, err_fun, sleep=sleep)
+            fun_attempt = FunctionRetry(fun, on_err=handler, result_check=result_check, errors=errors)
+
+            return fun_attempt(*args, **kwargs)
+
+        return retry_call
+
+    return fun_retry
+
+
+def retry_on_errors(*errors, **checks):
+    def fun_retry(fun):
+        @functools.wraps(fun)
+        def retry_call(*args, **kwargs):
+            retry = ErrorsRetries(fun, *errors, **checks)
 
             return retry(*args, **kwargs)
 
