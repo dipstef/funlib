@@ -52,21 +52,21 @@ class FailedAttempt(CallAttempt):
         return '%s Failed: %s: %s' % (str(self._fun_call), self.number, self.error.__class__.__name__)
 
 
-class FunctionAttempt(Function):
+class Attempt(Function):
     def __init__(self, fun, *args, **kwargs):
-        super(FunctionAttempt, self).__init__(LambdaFunction(fun, *args, **kwargs))
+        super(Attempt, self).__init__(LambdaFunction(fun, *args, **kwargs))
         self.attempts = 0
         self.started = None
         self._calls = []
 
-    def __call__(self):
+    def __call__(self, catch=(BaseException, )):
         call_time = self._new_attempt()
 
         try:
             result = self._fun()
 
             result = CompletedAttempt(self._fun, result, self.attempts, self.started, call_time, utc.now())
-        except BaseException, e:
+        except catch, e:
             result = FailedAttempt(self._fun, e, self.attempts, self.started, call_time, utc.now())
 
         self._calls.append(result)
