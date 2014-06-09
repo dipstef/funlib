@@ -1,75 +1,93 @@
 import sys
 from collections import namedtuple
 from dated.normalized import utc
-from .. import LambdaFunction
+from .. import LambdaFunction, Function
 
 attempt = namedtuple('attempt', ['call_time', 'end_time', 'result', 'error'])
 
 
-class FunctionAttempt(LambdaFunction):
+class CallAttempt(object):
+
+    def __init__(self, number, start_time, call_time, end_time):
+        self.number = number
+        self.start_time = start_time
+        self.call_time = call_time
+        self.end_time = end_time
+
+    @property
+    def attempted(self):
+        return self.end_time - self.start_time
+
+
+class CompletedAttempt(CallAttempt):
+
+    def __init__(self, fun_call, result, number, start_time, call_time, end_time):
+        super(CompletedAttempt, self).__init__(number, start_time, call_time, end_time)
+        self.result = result
+        self.error = None
+        self._fun_call = fun_call
+
+    def outcome(self):
+        return self.result
+
+    def __str__(self):
+        return '%s = %s' % (str(self._fun_call), self.result)
+
+
+class FailedAttempt(CallAttempt):
+
+    def __init__(self, fun_call, error, number, start_time, call_time, end_time):
+        super(FailedAttempt, self).__init__(number, start_time, call_time, end_time)
+        self.result = None
+        self.error = error
+        self._fun_call = fun_call
+
+    def outcome(self):
+        self.raise_cause()
+
+    def raise_cause(self):
+        raise self.error, None, sys.exc_info()[2]
+
+    def __str__(self):
+        return '%s Failed: %s: %s' % (str(self._fun_call), self.number, self.error.__class__.__name__)
+
+
+class FunctionAttempt(Function):
     def __init__(self, fun, *args, **kwargs):
-        super(FunctionAttempt, self).__init__(fun, *args, **kwargs)
+        super(FunctionAttempt, self).__init__(LambdaFunction(fun, *args, **kwargs))
         self.attempts = 0
+        self.started = None
         self._calls = []
 
     def __call__(self):
-        call_time = utc.now()
-        self.attempts += 1
+        call_time = self._new_attempt()
 
         try:
-            result = super(FunctionAttempt, self).__call__()
+            result = self._fun()
 
-            result = attempt(call_time, utc.now(), result, None)
+            result = CompletedAttempt(self._fun, result, self.attempts, self.started, call_time, utc.now())
         except BaseException, e:
-            result = attempt(call_time, utc.now(), None, e)
+            result = FailedAttempt(self._fun, e, self.attempts, self.started, call_time, utc.now())
 
         self._calls.append(result)
+
         return result
 
-    @property
-    def result(self):
-        last_call = self.last_call
-        if last_call:
-            if last_call.error:
-                _raise_cause_trace(last_call.error)
+    def _new_attempt(self):
+        call_time = utc.now()
 
-            return self.last_call.result
+        if not self.attempts:
+            self.started = call_time
 
-    @property
-    def error(self):
-        last_call = self.last_call
-        if last_call and last_call.error:
-            return last_call.error
+        self.attempts += 1
+        return call_time
 
     @property
     def last_call(self):
         return self._calls[-1] if self._calls else None
 
-    @property
-    def started(self):
-        return self._calls[0].call_time if self._calls else None
-
-    @property
-    def attempted(self):
-        if self.started:
-            return self._calls[-1].end_time - self.started
-
-    def raise_cause(self):
-        if self.error:
-            raise _raise_cause_trace(self.error)
-
     def __str__(self):
-        call_string = super(FunctionAttempt, self).__str__()
-
-        last_call = self.last_call
-
-        if not last_call:
-            return call_string
-        elif last_call.error:
-            return '%s Failed: %s: %s' % (call_string, self.attempts, self.error.__class__.__name__)
+        if self._calls:
+            return str(self.last_call)
         else:
-            return '%s = %s' % (call_string, last_call.result)
-
-
-def _raise_cause_trace(error):
-    raise error, None, sys.exc_info()[2]
+            return str(self._fun)

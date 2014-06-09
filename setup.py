@@ -13,7 +13,7 @@ setup(name=name,
       url='http://github.com/dipstef/{}/'.format(name),
       description=desc,
       license='http://www.apache.org/licenses/LICENSE-2.0',
-      packages=[name],
+      packages=['funlib', 'funlib.retry'],
       platforms=['Any'],
       requires=['unicoder']
 )

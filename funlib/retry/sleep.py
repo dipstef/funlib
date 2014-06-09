@@ -7,9 +7,6 @@ class Sleep(object):
         self._seconds = seconds
 
     def __call__(self, failed_attempt):
-        self._sleep()
-
-    def _sleep(self):
         time.sleep(self._seconds)
 
 
@@ -20,7 +17,7 @@ class SleepIncrement(Sleep):
         self._max_sleep = max_sleep
 
     def __call__(self, failed_attempt):
-        self._sleep()
+        super(SleepIncrement, self).__call__(failed_attempt)
         if self._seconds < self._max_sleep:
             seconds = self._increment_sleep(failed_attempt)
             seconds = seconds if seconds < self._max_sleep else self._max_sleep
@@ -47,3 +44,7 @@ class ExponentialSleep(SleepIncrement):
 
     def _increment_sleep(self, function_call_error):
         return 2 ** function_call_error.attempts
+
+
+def sleep(seconds):
+    return Sleep(seconds)

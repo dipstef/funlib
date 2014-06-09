@@ -19,10 +19,10 @@ class FunctionRetry(FunctionCall):
 
         while True:
             outcome = fun_attempt()
-            if outcome.result and self._validate_result(outcome.result):
+            if not outcome.error and self._validate_result(outcome.result):
                 return outcome.result
             else:
-                self._err_callback(fun_attempt)
+                self._err_callback(outcome)
 
     def _validate_result(self, result):
         return not self._result_check or self._result_check(result)

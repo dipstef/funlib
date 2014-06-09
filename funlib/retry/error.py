@@ -23,8 +23,8 @@ class StopAfterMaxTimes(FailedAttempt):
         super(StopAfterMaxTimes, self).__init__(err_callback=err_callback, sleep=sleep)
         self._max_attempts = max_times
 
-    def _should_stop(self, function_call_error):
-        return function_call_error.attempts == self._max_attempts
+    def _should_stop(self, failed_attempt):
+        return failed_attempt.number == self._max_attempts
 
 
 def try_times(times, err_callback=None, sleep=None):

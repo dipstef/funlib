@@ -1,4 +1,5 @@
 from funlib.retry import retry_function
+from funlib.retry.sleep import sleep
 
 
 def main():
@@ -7,7 +8,7 @@ def main():
 
     attempts = []
 
-    @retry_function(times=10, err_callback=_print_attempt)
+    @retry_function(times=10, err_callback=_print_attempt, sleep=sleep(1))
     def test(i):
         attempts.append(i)
         attempted = len(attempts)
