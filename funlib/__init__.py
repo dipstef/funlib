@@ -1,5 +1,5 @@
 from unicoder import encoded, decoded
-from funlib.util import call_string
+from .util import call_string
 
 
 class Function(object):

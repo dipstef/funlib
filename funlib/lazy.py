@@ -1,28 +1,14 @@
-import functools
 import time
 
-from .decorator import Memoized
+from .decorator import ParamDecorator
+from .util import instance_fun
+from .decorators.memoized import memoized
 
 
-class Wraps(object):
-    __name__ = '__wrapper__'
-    _fun = None
-
-    def _wraps(self, fun, doc=None):
-        self.__doc__ = doc or fun.__doc__
-        self.__name__ = fun.__name__
-        self.__module__ = fun.__module__
-        self._fun = fun
-
-
-class CachedCall(Wraps):
+class CachedCall(ParamDecorator):
     def __init__(self, expiration=0):
         assert isinstance(expiration, int)
         self.expiration = expiration
-
-    def __call__(self, property_fun, doc=None):
-        self._wraps(property_fun, doc)
-        return self
 
     def __get__(self, instance, owner):
         assert self._fun
@@ -54,23 +40,8 @@ def _get_call_cache(instance):
 class CachedFun(CachedCall):
 
     def _execute(self, instance):
-        memoized = MemoizedClassFun(instance, self._fun)
 
-        @functools.wraps(self._fun)
-        def call_memoized(*args, **kwargs):
-            return memoized(*args, **kwargs)
-
-        return call_memoized
-
-
-class MemoizedClassFun(Memoized):
-
-    def __init__(self, instance, fun):
-        super(MemoizedClassFun, self).__init__(fun, call_cache=_get_call_cache(instance))
-        self._instance = instance
-
-    def _execute_fun(self, *args, **kwargs):
-        return super(MemoizedClassFun, self)._execute_fun(self._instance, *args, **kwargs)
+        return memoized(instance_fun(instance, self._fun))
 
 
 class LazyFun(CachedFun):

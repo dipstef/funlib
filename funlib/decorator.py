@@ -1,59 +1,84 @@
-import signal
 import functools
-import collections
-from .error import TimeoutError
+import inspect
+from .util import instance_fun
 
 
-def timeout(seconds, error_message='Function call timed out'):
-
-    def decorated(func):
-        def _handle_timeout(signum, frame):
-            raise TimeoutError(error_message)
-
-        @functools.wraps(func)
-        def timeout_execute(*args, **kwargs):
-            signal.signal(signal.SIGALRM, _handle_timeout)
-            signal.alarm(seconds)
-            try:
-                result = func(*args, **kwargs)
-            finally:
-                signal.alarm(0)
-            return result
-
-        return timeout_execute
-
-    return decorated
+def decorator(func):
+    ''' Allow to use decorator either with arguments or not. '''
+    if isinstance(func, type):
+        return _class_wrapper(func)
+    else:
+        return _func_wrapper(func)
 
 
-class Memoized(object):
+def _is_func_arg(*args, **kw):
+    return len(args) == 1 and len(kw) == 0 and (inspect.isfunction(args[0]) or isinstance(args[0], type))
 
-    def __init__(self, fun, call_cache=None):
-        self._fun = fun
-        self._calls = call_cache or {}
 
-    def __call__(self, *args, **kwargs):
-        if _hashable_arguments(*args, **kwargs):
-            result = self._execute_and_cache(*args, **kwargs)
+def _class_wrapper(func):
+
+    def class_wrapper(*args, **kw):
+        if _is_func_arg(*args, **kw):
+            # create class before usage
+            return func()(*args, **kw)
+        return func(*args, **kw)
+
+    class_wrapper.__name__ = func.__name__
+    class_wrapper.__module__ = func.__module__
+
+    return class_wrapper
+
+
+def _func_wrapper(func):
+    @functools.wraps(func)
+    def func_wrapper(*args, **kw):
+        if _is_func_arg(*args, **kw):
+            return func(*args, **kw)
         else:
-            result = self._execute_fun(*args, **kwargs)
+            def functor(user_fun):
+                return func(user_fun, *args, **kw)
 
-        return result
-
-    def _execute_and_cache(self, *args, **kwargs):
-        call_key = tuple(list(args) + kwargs.items())
-
-        result = self._calls.get(call_key)
-        if not result:
-            result = self._execute_fun(*args, **kwargs)
-            self._calls[call_key] = result
-
-        return result
-
-    def _execute_fun(self, *args, **kwargs):
-        return self._fun(*args, **kwargs)
+            return functor
+    return func_wrapper
 
 
-def _hashable_arguments(*args, **kwargs):
-    return isinstance(args, collections.Hashable) and isinstance(kwargs.iteritems(), collections.Hashable)
+def decorated_property(decoration):
+    @decorator
+    def decorate(fget, *args, **kwargs):
+        if args or kwargs:
+            return property(decoration(*args, **kwargs)(fget))
+        else:
+            return property(decoration(fget))
+    return decorate
 
-memoized = Memoized
+
+class Decorator(object):
+
+    def __init__(self, fun):
+        self._fun = fun
+        functools.update_wrapper(self, fun)
+        self._instance = None
+
+    def __get__(self, instance, owner):
+        assert self._fun
+
+        if not self._instance:
+            self._fun = instance_fun(instance, self._fun)
+            self._instance = instance
+
+        return self
+
+    def __str__(self):
+        return str(self._fun)
+
+
+class ParamDecorator(object):
+    _fun = None
+
+    def __call__(self, fun, doc=None):
+        self._fun = fun
+        functools.update_wrapper(self, fun)
+        return self
+
+    def __str__(self):
+        return str(self._fun)
