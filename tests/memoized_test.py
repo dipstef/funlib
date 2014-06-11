@@ -1,10 +1,10 @@
-from funlib.decorators.memoized import memoized
+from funlib.decorators.memoized import memoized, cached
 
 
 def _test_class():
 
     class A(object):
-        @memoized
+        @cached
         def fibonacci(self, n):
             print 'Computing', n
             if n in (0, 1):
@@ -12,6 +12,7 @@ def _test_class():
             return self.fibonacci(n - 1) + self.fibonacci(n - 2)
 
     a = A()
+    print a.fibonacci
     a.fibonacci(10)
     a.fibonacci(10)
 

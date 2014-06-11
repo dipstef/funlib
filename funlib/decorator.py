@@ -15,16 +15,21 @@ def _is_func_arg(*args, **kw):
     return len(args) == 1 and len(kw) == 0 and (inspect.isfunction(args[0]) or isinstance(args[0], type))
 
 
-def _class_wrapper(func):
+def _class_wrapper(class_decorator):
 
-    def class_wrapper(*args, **kw):
-        if _is_func_arg(*args, **kw):
-            # create class before usage
-            return func()(*args, **kw)
-        return func(*args, **kw)
+    class class_wrapper(class_decorator):
 
-    class_wrapper.__name__ = func.__name__
-    class_wrapper.__module__ = func.__module__
+        def __new__(cls, *args, **kwargs):
+            if _is_func_arg(*args, **kwargs):
+                klass = class_decorator.__new__(cls)
+                klass.__init__()
+                classed = klass(*args, **kwargs)
+                functools.update_wrapper(classed, args[0])
+            else:
+                classed = class_decorator.__new__(cls, *args, **kwargs)
+                classed.__init__(*args, **kwargs)
+
+            return classed
 
     return class_wrapper
 
