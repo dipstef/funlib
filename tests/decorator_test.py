@@ -1,4 +1,4 @@
-from funlib.decorator import decorator, decorated_property
+from funlib.decorator import decorator, property_decorator
 
 
 def _test(add):
@@ -15,7 +15,7 @@ def _test(add):
     assert 5 == sum_plus2(1, 2)
     assert 8 == sum_plus5(1, 2)
 
-    add_property = decorated_property(add)
+    property_plus = property_decorator(add)
 
     class Sum(object):
 
@@ -37,23 +37,23 @@ def _test(add):
         def five(self):
             return 2
 
-        @decorated_property(add(value=5))
+        @property_decorator(add(value=5))
         def seven(self):
             return 2
 
-        @decorated_property(add)
+        @property_decorator(add)
         def nine(self):
             return 7
 
-        @add_property
+        @property_plus
         def eleven(self):
             return 9
 
-        @add_property(value=3)
+        @property_plus(value=3)
         def twelve(self):
             return 9
 
-        @add_property(3)
+        @property_plus(3)
         def ten(self):
             return 7
 

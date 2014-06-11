@@ -1,7 +1,6 @@
-import functools
-
 from .. import FunctionCall
 from .attempt import Attempt
+from funlib.decorator import decorator
 from .retries import try_times
 from .errors import ErrorClasses
 
@@ -61,32 +60,24 @@ class FunctionRetry(FunctionRetryBase):
     def _get_err_callback(self, error):
         return self._errors_callback
 
+@decorator
+def retry(fun, times, on_err=None, sleep=None, result_check=None, on_errors=(Exception, )):
+    def retry_call(*args, **kwargs):
+        err_fun = on_err or kwargs.pop('on_err', None)
 
-def retry(times, on_err=None, sleep=None, result_check=None, errors=(Exception, )):
+        handler = try_times(times, err_fun, sleep=sleep)
+        retry_fun = FunctionRetry(fun, on_err=handler, result_check=result_check, errors=on_errors)
 
-    def fun_retry(fun):
-        @functools.wraps(fun)
-        def retry_call(*args, **kwargs):
-            err_fun = on_err or kwargs.pop('on_err', None)
+        return retry_fun(*args, **kwargs)
 
-            handler = try_times(times, err_fun, sleep=sleep)
-            fun_attempt = FunctionRetry(fun, on_err=handler, result_check=result_check, errors=errors)
-
-            return fun_attempt(*args, **kwargs)
-
-        return retry_call
-
-    return fun_retry
+    return retry_call
 
 
-def retry_on_errors(*errors, **checks):
-    def fun_retry(fun):
-        @functools.wraps(fun)
-        def retry_call(*args, **kwargs):
-            retry = ErrorsRetries(fun, *errors, **checks)
+@decorator
+def retry_on_errors(fun, *errors, **checks):
+    def retry_call(*args, **kwargs):
+        retry_fun = ErrorsRetries(fun, *errors, **checks)
 
-            return retry(*args, **kwargs)
+        return retry_fun(*args, **kwargs)
 
-        return retry_call
-
-    return fun_retry
+    return retry_call

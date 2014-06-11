@@ -1,4 +1,5 @@
-from funlib.decorators.memoized import memoized, cached
+from funlib.decorator import property_decorator
+from funlib.cached import cached, memoized
 
 
 def _test_class():
@@ -6,13 +7,22 @@ def _test_class():
     class A(object):
         @cached
         def fibonacci(self, n):
-            print 'Computing', n
+            print 'Fibonacci', n
             if n in (0, 1):
                 return n
             return self.fibonacci(n - 1) + self.fibonacci(n - 2)
 
+        @property_decorator(cached)
+        def two(self):
+            print 'Computing Two'
+            return 2
+
     a = A()
-    print a.fibonacci
+    assert a.fibonacci.__name__ == 'fibonacci'
+
+    assert 2 == a.two
+    assert 2 == a.two
+
     a.fibonacci(10)
     a.fibonacci(10)
 
@@ -21,7 +31,7 @@ def _test_function():
 
     @memoized
     def fibonacci(n):
-        print 'Computing', n
+        print 'Fibonacci', n
         if n in (0, 1):
             return n
         return fibonacci(n - 1) + fibonacci(n - 2)

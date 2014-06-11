@@ -2,7 +2,7 @@ import collections
 
 from dated import utc
 
-from ..decorator import decorator
+from .decorator import decorator, property_decorator
 
 
 @decorator
@@ -65,3 +65,5 @@ class cached(memoized):
 
     def _is_expired(self, last_update):
         return bool(self._expiration) and utc.now() - last_update > self._expiration
+
+cached_property = property_decorator(cached)

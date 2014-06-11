@@ -47,7 +47,7 @@ def _func_wrapper(func):
     return func_wrapper
 
 
-def decorated_property(decoration):
+def property_decorator(decoration):
     @decorator
     def decorate(fget, *args, **kwargs):
         if args or kwargs:

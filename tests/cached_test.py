@@ -1,23 +1,24 @@
+from dated.date_time import seconds
 from funlib.util import call_string
-from funlib.lazy import cached_property, lazy
+from funlib.cached import cached_property, cached
 
 
 def main():
 
     class A(object):
-        @cached_property(expiration=1)
+        @cached_property(expiration=seconds(1))
         def boo(self):
-            print 'Expensive calculation'
+            print 'Calculating Boo'
             return 1
 
-        @lazy
+        @cached
         def post(self):
-            print 'Expensive Post'
+            print 'Posting'
             return 2
 
-        @lazy
+        @cached
         def foo(self, *args, **kwargs):
-            print 'Expensive Foo: ', call_string('foo', *args, **kwargs)
+            print 'Fooing: ', call_string('foo', *args, **kwargs)
             return 3
 
     a = A()

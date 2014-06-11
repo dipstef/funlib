@@ -1,5 +1,6 @@
 import time
-from funlib.decorators.timeout import timeout, TimeoutError
+
+from funlib.timeout import timeout, TimeoutError
 
 
 @timeout(seconds=1)

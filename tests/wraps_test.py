@@ -1,4 +1,4 @@
-from funlib.lazy import Wraps
+from funlib.cached import Wraps
 
 wraps = Wraps()
 
