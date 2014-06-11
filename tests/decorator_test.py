@@ -34,6 +34,14 @@ def _test(add):
         def sum_times2_plus7(self, x, y):
             return self.sum_plus2(x, y) + self.sum_plus5(x, y)
 
+        @add
+        def sum_times2_plus9(self, x, y):
+            return self.sum_plus2(x, y) + self.sum_plus5(x, y)
+
+        @add(value=3)
+        def sum_times2_plus10(self, x, y):
+            return self.sum_plus2(x, y) + self.sum_plus5(x, y)
+
         @property
         @add
         def four(self):
@@ -73,6 +81,8 @@ def _test(add):
     assert 5 == sum.sum_plus2(1, 2)
     assert 8 == sum.sum_plus5(1, 2)
     assert 13 == sum.sum_times2_plus7(1, 2)
+    assert 15 == sum.sum_times2_plus9(1, 2)
+    assert 16 == sum.sum_times2_plus10(1, 2)
 
     assert 4 == sum.four
     assert 7 == sum.seven

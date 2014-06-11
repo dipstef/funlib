@@ -63,7 +63,7 @@ class FunctionRetry(FunctionRetryBase):
 @decorator
 def retry(fun, times, on_err=None, sleep=None, result_check=None, on_errors=(Exception, )):
     def retry_call(*args, **kwargs):
-        err_fun = on_err or kwargs.pop('on_err', None)
+        err_fun = kwargs.pop('on_err', on_err)
 
         handler = try_times(times, err_fun, sleep=sleep)
         retry_fun = FunctionRetry(fun, on_err=handler, result_check=result_check, errors=on_errors)
@@ -74,9 +74,10 @@ def retry(fun, times, on_err=None, sleep=None, result_check=None, on_errors=(Exc
 
 
 @decorator
-def retry_on_errors(fun, *errors, **checks):
+def retry_on_errors(fun, *error_handlers, **checks):
     def retry_call(*args, **kwargs):
-        retry_fun = ErrorsRetries(fun, *errors, **checks)
+        handlers = kwargs.pop('error_handlers', error_handlers)
+        retry_fun = ErrorsRetries(fun, *handlers, **checks)
 
         return retry_fun(*args, **kwargs)
 

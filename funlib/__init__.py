@@ -46,11 +46,11 @@ class LambdaFunction(Function):
 
     def __init__(self, fun, *args, **kwargs):
         super(LambdaFunction, self).__init__(fun)
-        self._args = args
-        self._kwargs = kwargs or {}
+        self.args = args
+        self.kwargs = kwargs or {}
 
     def __str__(self):
-        return call_string(self._fun.__name__, *self._args, **self._kwargs)
+        return call_string(self._fun.__name__, *self.args, **self.kwargs)
 
     def __call__(self):
-        return self._fun(*self._args, **self._kwargs)
+        return self._fun(*self.args, **self.kwargs)
