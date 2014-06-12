@@ -70,7 +70,7 @@ def sleep(seconds):
     return Sleep(seconds)
 
 
-def increment_sleep(seconds, by=1, to=60):
+def incremental_sleep(seconds, by=1, to=60):
     return SleepPenalty(seconds, penalty=by, max_sleep=to)
 
 
