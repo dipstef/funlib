@@ -1,5 +1,5 @@
 from .. import FunctionCall
-from .attempt import Attempt
+from .attempt import Attempts
 from funlib.decorator import decorator
 from .retries import try_times
 from .errors import ErrorClasses
@@ -14,7 +14,7 @@ class FunctionRetryBase(FunctionCall):
         self._error_classes = (BaseException, )
 
     def _call_fun(self, *args, **kwargs):
-        call_attempt = Attempt(self._fun, *args, **kwargs)
+        call_attempt = Attempts(self._fun, *args, **kwargs)
 
         while True:
             outcome = call_attempt(catch=self._error_classes)
@@ -36,14 +36,14 @@ class FunctionRetryBase(FunctionCall):
         raise NotImplementedError
 
 
-class ErrorsRetries(FunctionRetryBase):
+class RetryOnErrors(FunctionRetryBase):
 
-    def __init__(self, fun, *errors, **checks):
-        result_check = checks.pop('result_check', None)
-        super(ErrorsRetries, self).__init__(fun, result_check)
+    def __init__(self, fun, handlers, result_check=None):
+        super(RetryOnErrors, self).__init__(fun, result_check)
 
-        errors = errors or [(Exception,)]
-        self._error_handlers = ErrorClasses(*errors)
+        handlers = handlers or [(Exception,)]
+        self._error_handlers = ErrorClasses(*handlers)
+
         self._error_classes = self._error_handlers.classes
 
     def _get_err_callback(self, error):
@@ -76,8 +76,9 @@ def retry(fun, times, on_err=None, sleep=None, result_check=None, on_errors=(Exc
 @decorator
 def retry_on_errors(fun, *error_handlers, **checks):
     def retry_call(*args, **kwargs):
-        handlers = kwargs.pop('error_handlers', error_handlers)
-        retry_fun = ErrorsRetries(fun, *handlers, **checks)
+        result_check = checks.pop('result_check', None)
+
+        retry_fun = RetryOnErrors(fun, error_handlers, result_check)
 
         return retry_fun(*args, **kwargs)
 

@@ -19,12 +19,13 @@ class FailedAttemptRetries(object):
 
 
 class AttemptTimes(FailedAttemptRetries):
+
     def __init__(self, times=None, err_callback=None, sleep=None):
         super(AttemptTimes, self).__init__(err_callback=err_callback, sleep=sleep)
         self._max_attempts = times
 
     def _should_stop(self, failed_attempt):
-        return self._max_attempts and failed_attempt.number == self._max_attempts
+        return self._max_attempts and failed_attempt.error_count == self._max_attempts
 
 
 def try_times(times, on_err=None, sleep=None):

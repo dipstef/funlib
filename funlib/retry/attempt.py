@@ -1,12 +1,12 @@
 import sys
-from collections import namedtuple
+from collections import namedtuple, Counter
 from dated.normalized import utc
 from .. import LambdaFunction, Function
 
 attempt = namedtuple('attempt', ['call_time', 'end_time', 'result', 'error'])
 
 
-class CallAttempt(object):
+class Attempt(object):
 
     def __init__(self, fun_call, number, start_time, call_time, end_time):
         self.call = fun_call
@@ -23,7 +23,7 @@ class CallAttempt(object):
         return str(self.call)
 
 
-class CompletedAttempt(CallAttempt):
+class CompletedAttempt(Attempt):
 
     def __init__(self, fun_call, result, number, start_time, call_time, end_time):
         super(CompletedAttempt, self).__init__(fun_call, number, start_time, call_time, end_time)
@@ -37,12 +37,14 @@ class CompletedAttempt(CallAttempt):
         return '%s = %s' % (str(self.call), self.result)
 
 
-class FailedAttempt(CallAttempt):
+class FailedAttempt(Attempt):
 
-    def __init__(self, fun_call, error, number, start_time, call_time, end_time):
+    def __init__(self, fun_call, error, error_count, catch_clause, number, start_time, call_time, end_time):
         super(FailedAttempt, self).__init__(fun_call, number, start_time, call_time, end_time)
         self.result = None
         self.error = error
+        self.error_count = error_count
+        self.catch_clause = catch_clause
 
     def outcome(self):
         self.raise_cause()
@@ -54,12 +56,14 @@ class FailedAttempt(CallAttempt):
         return '%s Failed: %s: %s' % (str(self.call), self.number, self.error.__class__.__name__)
 
 
-class Attempt(Function):
+class Attempts(Function):
+
     def __init__(self, fun, *args, **kwargs):
-        super(Attempt, self).__init__(LambdaFunction(fun, *args, **kwargs))
+        super(Attempts, self).__init__(LambdaFunction(fun, *args, **kwargs))
         self.attempts = 0
         self.started = None
         self._calls = []
+        self._error_counts = Counter()
 
     def __call__(self, catch=(BaseException, )):
         call_time = self._new_attempt()
@@ -69,7 +73,9 @@ class Attempt(Function):
 
             result = CompletedAttempt(self._fun, result, self.attempts, self.started, call_time, utc.now())
         except catch, e:
-            result = FailedAttempt(self._fun, e, self.attempts, self.started, call_time, utc.now())
+            self._error_counts.update(catch)
+            error_count = self._error_counts[catch]
+            result = FailedAttempt(self._fun, e, error_count, catch, self.attempts, self.started, call_time, utc.now())
 
         self._calls.append(result)
 

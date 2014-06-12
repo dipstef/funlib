@@ -11,8 +11,12 @@ def decorator(func):
         return _func_wrapper(func)
 
 
-def _is_func_arg(*args, **kw):
-    return len(args) == 1 and len(kw) == 0 and (inspect.isfunction(args[0]) or isinstance(args[0], type))
+def _is_func(arg):
+    return inspect.isfunction(arg) or inspect.ismethod(arg) or isinstance(arg, type)
+
+
+def _is_func_arg(*args, **kwargs):
+    return len(args) == 1 and len(kwargs) == 0 and (_is_func(args[0]))
 
 
 def _class_wrapper(class_decorator):
