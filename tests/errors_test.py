@@ -1,5 +1,5 @@
 from funlib.retry import ErrorCatches
-from funlib.retry.errors import ErrorHandlers, handle
+from funlib.retry.errors import ErrorsHandler, handle
 
 
 def _raise(e):
@@ -15,8 +15,8 @@ def _nothing():
 
 
 def _errors_mapping_test():
-    assert ErrorHandlers((ValueError, BaseException), _raise) == ((ValueError, BaseException), _raise)
-    assert ErrorHandlers((ValueError, ), _raise) == (ValueError, _raise)
+    assert ErrorsHandler((ValueError, BaseException), _raise) == ((ValueError, BaseException), _raise)
+    assert ErrorsHandler((ValueError, ), _raise) == (ValueError, _raise)
 
     assert handle(ValueError, BaseException).doing(_raise) == ((ValueError, BaseException), _raise)
     assert handle(ValueError).doing(_raise) == (ValueError, _raise)

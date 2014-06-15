@@ -6,37 +6,27 @@ import inspect
 class ErrorClassHandling(object):
 
     def __init__(self, *errors_handlers):
-        self.declarations = tuple(ErrorHandlers(*error_handler_tuple) for error_handler_tuple in errors_handlers)
-        self._error_mappings = self._error_tuples_to_dict(errors_handlers)
-        self._mro_mappings = dict(self._error_mappings)
+        self.declarations = ()
+        self._error_mappings = OrderedDict()
+        self._mro_mappings = OrderedDict()
+
+        for error_classes, handler in errors_handlers:
+            self[error_classes] = handler
+
         self._lookups = set()
 
-    @staticmethod
-    def _error_tuples_to_dict(error_mappings):
-        error_handlers = OrderedDict()
-        for error_tuple in error_mappings:
-            error_classes = error_tuple[0]
-            if isinstance(error_classes, type):
-                error_classes = (error_classes, )
+    def __setitem__(self, error_classes, handler):
+        errors_handler = ErrorsHandler(error_classes, handler)
+        self.add(errors_handler)
 
-            for error_class in error_classes:
-                assert issubclass(error_class, BaseException)
-                error_handlers[error_class] = error_tuple[1]
-
-        return error_handlers
+    def add(self, errors_handler):
+        self.declarations += (errors_handler, )
+        for error_class in errors_handler.errors:
+            self._error_mappings[error_class] = errors_handler.handler
+            self._mro_mappings[error_class] = errors_handler.handler
 
     def get(self, error_class):
         return self._mro_mappings.get(error_class) or self._resolve_mro_mapping(error_class)
-
-    def __setitem__(self, error_classes, mapping):
-        self.declarations += (ErrorHandlers(error_classes, mapping), )
-
-        if isinstance(error_classes, type):
-            error_classes = (error_classes, )
-
-        for error_class in error_classes:
-            self._error_mappings[error_class] = mapping
-            self._mro_mappings[error_class] = mapping
 
     def _resolve_mro_mapping(self, error):
         if not error in self._lookups:
@@ -59,10 +49,22 @@ class ErrorClassHandling(object):
         copy.declarations = tuple(self.declarations)
         copy._error_mappings = OrderedDict(self._error_mappings)
         copy._mro_mappings = dict(self._mro_mappings)
+        copy._lookups = set(self._lookups)
         return copy
 
     def copy(self):
         return copy.copy(self)
+
+
+class ErrorHandle(namedtuple('ErrorHandle', ['error', 'handler'])):
+
+    def __new__(cls, error, handler):
+        assert issubclass(error, BaseException)
+        return super(ErrorHandle, cls).__new__(cls, error, handler)
+
+    @property
+    def errors(self):
+        return self.error,
 
 
 class ErrorCatches(ErrorClassHandling):
@@ -77,13 +79,7 @@ class ErrorCatches(ErrorClassHandling):
         return sorted(error_mro, key=lambda e: catches.index(e))
 
 
-class ErrorHandle(namedtuple('ErrorHandle', ['error', 'handler'])):
-    def __new__(cls, error, handler):
-        assert issubclass(error, BaseException)
-        return super(ErrorHandle, cls).__new__(cls, error, handler)
-
-
-class ErrorHandlers(namedtuple('ErrorHandlers', ['errors', 'handler'])):
+class ErrorsHandler(namedtuple('ErrorHandlers', ['errors', 'handler'])):
 
     def __new__(cls, errors, handler):
         if isinstance(errors, type):
@@ -92,7 +88,7 @@ class ErrorHandlers(namedtuple('ErrorHandlers', ['errors', 'handler'])):
             return ErrorHandle(errors[0], handler)
         else:
             assert all((issubclass(error_class, BaseException) for error_class in errors))
-            return super(ErrorHandlers, cls).__new__(cls, tuple(errors), handler)
+            return super(ErrorsHandler, cls).__new__(cls, tuple(errors), handler)
 
 
 class handle(object):
@@ -100,4 +96,4 @@ class handle(object):
         self._errors = (error, ) + errors
 
     def doing(self, handler):
-        return ErrorHandlers(self._errors, handler)
+        return ErrorsHandler(self._errors, handler)
