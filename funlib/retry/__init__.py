@@ -2,7 +2,7 @@ from .. import FunctionCall
 from .attempt import Attempts
 from funlib.decorator import decorator
 from .retries import try_times
-from .errors import ErrorClasses
+from .errors import ErrorCatches, handle
 
 
 class FunctionRetryBase(FunctionCall):
@@ -11,7 +11,7 @@ class FunctionRetryBase(FunctionCall):
         super(FunctionRetryBase, self).__init__(fun)
 
         self._result_check = result_check
-        self._error_classes = (BaseException, )
+        self._error_classes = (Exception, )
 
     def _call_fun(self, *args, **kwargs):
         call_attempt = Attempts(self._fun, *args, **kwargs)
@@ -41,8 +41,7 @@ class RetryOnErrors(FunctionRetryBase):
     def __init__(self, fun, handlers, result_check=None):
         super(RetryOnErrors, self).__init__(fun, result_check)
 
-        handlers = handlers or [(Exception,)]
-        self._error_handlers = ErrorClasses(*handlers)
+        self._error_handlers = ErrorCatches(*handlers)
 
         self._error_classes = self._error_handlers.classes
 
@@ -52,9 +51,9 @@ class RetryOnErrors(FunctionRetryBase):
 
 class FunctionRetry(FunctionRetryBase):
 
-    def __init__(self, fun, result_check=None, on_err=None, errors=None):
+    def __init__(self, fun, result_check=None, on_err=None, errors=(Exception,)):
         super(FunctionRetry, self).__init__(fun, result_check)
-        self._error_classes = errors or (Exception,)
+        self._error_classes = errors
         self._errors_callback = on_err
 
     def _get_err_callback(self, error):
