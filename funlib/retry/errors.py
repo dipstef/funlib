@@ -43,20 +43,21 @@ class ErrorClassHandling(object):
         for errors_handler in errors_handlers:
             errors_definition = self._get_existing_handlers(errors_handler.errors)
 
-            existing_definitions = itertools.groupby(errors_handler.errors, key=lambda x: errors_definition.get(x))
+            existing_handlers = itertools.groupby(errors_handler.errors, key=lambda x: errors_definition.get(x))
 
-            for definition, group in existing_definitions:
-                if definition:
-                    matching = [error for error in errors_handler.errors if definition.matching(error)]
-                    remaining = [error for error in definition.errors if not error in matching]
+            for existing, group in existing_handlers:
+                if existing:
+                    matching = [error for error in errors_handler.errors if existing.matching(error)]
+                    remaining = [error for error in existing.errors if not error in matching]
 
-                    position = declarations.index(definition)
-                    new_errors_handler = ErrorsHandler(matching, errors_handler.handler)
+                    position = declarations.index(existing)
+
+                    errors_handler = ErrorsHandler(matching, errors_handler.handler)
                     if remaining:
-                        declarations[position] = ErrorsHandler(remaining, definition.handler)
-                        declarations = declarations[:position] + [new_errors_handler] + declarations[position:]
+                        declarations[position] = ErrorsHandler(remaining, existing.handler)
+                        declarations = declarations[:position] + [errors_handler] + declarations[position:]
                     else:
-                        declarations[position] = new_errors_handler
+                        declarations[position] = errors_handler
                 else:
                     declarations.append(errors_handler)
 
