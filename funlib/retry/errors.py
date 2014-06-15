@@ -2,7 +2,6 @@ from collections import OrderedDict, namedtuple
 import copy
 import inspect
 import itertools
-from collected.sequence import partition
 
 
 class ErrorClassHandling(object):
@@ -35,40 +34,48 @@ class ErrorClassHandling(object):
             self._handlers_declaration[error_class] = errors_handler
 
     def override(self, *errors_handlers):
+        declarations = self._update_declarations(errors_handlers)
 
+        return self.__class__(*declarations)
+
+    def _update_declarations(self, errors_handlers):
         declarations = list(self._declarations)
-
         for errors_handler in errors_handlers:
             errors_definition = self._get_existing_handlers(errors_handler.errors)
 
-            definitions = itertools.groupby(errors_handler.errors, key=lambda x: errors_definition.get(x))
-            for existing_definition, group in definitions:
-                if existing_definition:
-                    existing, remaining = partition(lambda e: e in errors_handler.errors, existing_definition.errors)
+            existing_definitions = itertools.groupby(errors_handler.errors, key=lambda x: errors_definition.get(x))
 
-                    position = declarations.index(existing_definition)
+            for definition, group in existing_definitions:
+                if definition:
+                    matching = [error for error in errors_handler.errors if definition.matching(error)]
+                    remaining = [error for error in definition.errors if not error in matching]
 
-                    new_errors_handler = ErrorsHandler(existing, errors_handler.handler)
+                    position = declarations.index(definition)
+                    new_errors_handler = ErrorsHandler(matching, errors_handler.handler)
                     if remaining:
-                        declarations[position] = ErrorsHandler(remaining, existing_definition.handler)
+                        declarations[position] = ErrorsHandler(remaining, definition.handler)
                         declarations = declarations[:position] + [new_errors_handler] + declarations[position:]
                     else:
                         declarations[position] = new_errors_handler
                 else:
                     declarations.append(errors_handler)
 
-        return self.__class__(*declarations)
+        return declarations
 
     def _get_existing_handlers(self, errors):
         existing_handlers = OrderedDict()
 
         for error_class in errors:
-            declaration = self._handlers_declaration.get(error_class)
+            declaration = self._get_error_handler(error_class)
 
             if declaration:
                 existing_handlers[error_class] = declaration
 
         return existing_handlers
+
+    def _get_error_handler(self, error_class):
+        declaration = self._handlers_declaration.get(error_class)
+        return declaration
 
     def get(self, error_class):
         return self._mro_mappings.get(error_class) or self._resolve_mro_mapping(error_class)
@@ -80,7 +87,7 @@ class ErrorClassHandling(object):
             return error_mappings.get(error)
 
     def _base_errors(self, error):
-        return (cls for cls in inspect.getmro(error) if issubclass(cls, BaseException) if cls in self._error_mappings)
+        return (error_class for error_class in _base_errors(error) if error_class in self._error_mappings)
 
     @property
     def classes(self):
@@ -117,8 +124,33 @@ class ErrorCatches(ErrorClassHandling):
         catches = self._error_mappings.keys()
         return sorted(error_mro, key=lambda e: catches.index(e))
 
+    def _get_error_handler(self, error_class):
+        error_definition = super(ErrorCatches, self)._get_error_handler(error_class)
+        if not error_definition:
+            for base_error in self._base_errors(error_class):
+                error_definition = super(ErrorCatches, self)._get_error_handler(base_error)
+                if error_definition:
+                    return error_definition
+        return error_definition
 
-class ErrorHandle(namedtuple('ErrorHandle', ['error', 'handler'])):
+
+def _base_errors(error_class):
+    return (cls for cls in inspect.getmro(error_class) if issubclass(cls, BaseException))
+
+
+class ErrorMatching(object):
+
+    def matches(self, error):
+        return any(self.matching(error))
+
+    def _matching(self, error):
+        return (error for error in _base_errors(error) if error in self.errors)
+
+    def matching(self, error):
+        return list(self._matching(error))
+
+
+class ErrorHandle(namedtuple('ErrorHandle', ['error', 'handler']), ErrorMatching):
 
     def __new__(cls, error, handler):
         assert issubclass(error, BaseException)
@@ -129,7 +161,7 @@ class ErrorHandle(namedtuple('ErrorHandle', ['error', 'handler'])):
         return self.error,
 
 
-class ErrorsHandler(namedtuple('ErrorHandlers', ['errors', 'handler'])):
+class ErrorsHandler(namedtuple('ErrorHandlers', ['errors', 'handler']), ErrorMatching):
 
     def __new__(cls, errors, handler):
         if isinstance(errors, type):

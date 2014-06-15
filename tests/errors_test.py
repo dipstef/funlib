@@ -1,5 +1,5 @@
 from funlib.retry import ErrorCatches
-from funlib.retry.errors import ErrorsHandler, handle
+from funlib.retry.errors import ErrorsHandler, handle, ErrorClassHandling
 
 
 def _raise(e):
@@ -36,24 +36,30 @@ def _extend_declarations_test():
 
 
 def _override_declarations_test():
-    declarations = ((ValueError, TypeError), _one), (BaseException, _raise)
-    errors = ErrorCatches(*declarations)
+    errors = ErrorClassHandling(((ValueError, TypeError), _one), (BaseException, _raise))
 
-    override_value_error = ErrorsHandler(ValueError, _nothing)
-
-    errors2 = errors.override(override_value_error)
+    errors2 = errors.override(ErrorsHandler(ValueError, _nothing))
     assert errors2.declarations == ((ValueError, _nothing), (TypeError, _one), (BaseException, _raise))
 
-    add_standard_error = ErrorsHandler(StandardError, _nothing)
-
-    errors2 = errors.override(add_standard_error)
+    errors2 = errors.override(ErrorsHandler(StandardError, _nothing))
     assert errors2.declarations == (((ValueError, TypeError), _one), (BaseException, _raise), (StandardError, _nothing))
+
+
+def _override_declarations2_test():
+    errors = ErrorCatches(((ValueError, TypeError), _one), (BaseException, _raise))
+
+    errors2 = errors.override(ErrorsHandler(ValueError, _nothing))
+    assert errors2.declarations == ((ValueError, _nothing), (TypeError, _one), (BaseException, _raise))
+
+    errors2 = errors.override(ErrorsHandler(StandardError, _nothing))
+    assert errors2.declarations == (((ValueError, TypeError), _one), (StandardError, _nothing), (BaseException, _raise))
 
 
 def main():
     _errors_mapping_test()
     _extend_declarations_test()
     _override_declarations_test()
+    _override_declarations2_test()
 
 if __name__ == '__main__':
     main()
