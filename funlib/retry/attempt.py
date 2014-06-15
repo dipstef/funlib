@@ -3,8 +3,6 @@ from collections import namedtuple, Counter
 from dated.normalized import utc
 from .. import LambdaFunction, Function
 
-attempt = namedtuple('attempt', ['call_time', 'end_time', 'result', 'error'])
-
 
 class Attempt(object):
 
