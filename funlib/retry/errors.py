@@ -4,6 +4,49 @@ import inspect
 import itertools
 
 
+class ErrorMatching(object):
+
+    def matches(self, error):
+        return any(self.matching(error))
+
+    def _matching(self, error):
+        return (error for error in _base_errors(error) if error in self.errors)
+
+    def matching(self, error):
+        return list(self._matching(error))
+
+
+class ErrorHandle(namedtuple('ErrorHandle', ['error', 'handler']), ErrorMatching):
+
+    def __new__(cls, error, handler):
+        assert issubclass(error, BaseException)
+        return super(ErrorHandle, cls).__new__(cls, error, handler)
+
+    @property
+    def errors(self):
+        return self.error,
+
+
+class ErrorsHandler(namedtuple('ErrorHandlers', ['errors', 'handler']), ErrorMatching):
+
+    def __new__(cls, errors, handler):
+        if isinstance(errors, type):
+            errors = (errors, )
+        if len(errors) == 1:
+            return ErrorHandle(errors[0], handler)
+        else:
+            assert all((issubclass(error_class, BaseException) for error_class in errors))
+            return super(ErrorsHandler, cls).__new__(cls, tuple(errors), handler)
+
+
+class handle(object):
+    def __init__(self, error, *errors):
+        self._errors = (error, ) + errors
+
+    def doing(self, handler):
+        return ErrorsHandler(self._errors, handler)
+
+
 class CatchClauses(object):
 
     def __init__(self, *errors_handlers):
@@ -102,27 +145,25 @@ class ErrorCatches(CatchClauses):
     def _update_catches(self, errors_handlers):
         declarations = list(self._catches)
         for errors_handler in errors_handlers:
-            errors_definition = self._get_existing_handlers(errors_handler.errors)
-
-            existing_handlers = itertools.groupby(errors_handler.errors, key=lambda x: errors_definition.get(x))
-
-            for existing, group in existing_handlers:
-                if existing:
-                    matching = [error for error in errors_handler.errors if existing.matching(error)]
-                    remaining = [error for error in existing.errors if not error in matching]
-
-                    position = declarations.index(existing)
-
-                    errors_handler = ErrorsHandler(matching, errors_handler.handler)
-                    if remaining:
-                        declarations[position] = ErrorsHandler(remaining, existing.handler)
-                        declarations = declarations[:position] + [errors_handler] + declarations[position:]
-                    else:
-                        declarations[position] = errors_handler
-                else:
-                    declarations.append(errors_handler)
+            existing_catches = self._match_existing_catches(errors_handler)
+            if existing_catches:
+                declarations = _split_existing_catches(declarations, errors_handler, existing_catches)
+            else:
+                declarations.append(errors_handler)
 
         return declarations
+
+    def _match_existing_catches(self, catch):
+        errors_definition = self._get_existing_handlers(catch.errors)
+
+        existing_handlers = itertools.groupby(catch.errors, key=lambda x: errors_definition.get(x))
+
+        existing_catches = []
+        for existing, group in existing_handlers:
+            if existing:
+                existing_catches.append((existing, list(group)))
+
+        return existing_catches
 
     def _get_error_handler(self, error_class):
         error_definition = super(ErrorCatches, self)._get_error_handler(error_class)
@@ -138,44 +179,34 @@ def _base_errors(error_class):
     return (cls for cls in inspect.getmro(error_class) if issubclass(cls, BaseException))
 
 
-class ErrorMatching(object):
+def _split_existing_catches(declarations, errors_handler, existing_catches):
+    for existing, matching, remaining in _iterate_matching_catches(errors_handler, existing_catches):
+        position = declarations.index(existing)
 
-    def matches(self, error):
-        return any(self.matching(error))
-
-    def _matching(self, error):
-        return (error for error in _base_errors(error) if error in self.errors)
-
-    def matching(self, error):
-        return list(self._matching(error))
-
-
-class ErrorHandle(namedtuple('ErrorHandle', ['error', 'handler']), ErrorMatching):
-
-    def __new__(cls, error, handler):
-        assert issubclass(error, BaseException)
-        return super(ErrorHandle, cls).__new__(cls, error, handler)
-
-    @property
-    def errors(self):
-        return self.error,
-
-
-class ErrorsHandler(namedtuple('ErrorHandlers', ['errors', 'handler']), ErrorMatching):
-
-    def __new__(cls, errors, handler):
-        if isinstance(errors, type):
-            errors = (errors, )
-        if len(errors) == 1:
-            return ErrorHandle(errors[0], handler)
+        if remaining.errors:
+            declarations[position] = remaining
+            declarations = declarations[:position] + [matching] + declarations[position:]
         else:
-            assert all((issubclass(error_class, BaseException) for error_class in errors))
-            return super(ErrorsHandler, cls).__new__(cls, tuple(errors), handler)
+            declarations[position] = matching
+
+    return declarations
 
 
-class handle(object):
-    def __init__(self, error, *errors):
-        self._errors = (error, ) + errors
+def _iterate_matching_catches(catch, existing_catches):
+    for existing, group_errors in existing_catches:
+        matching = _catch_errors_move_up(catch, existing, group_errors)
 
-    def doing(self, handler):
-        return ErrorsHandler(self._errors, handler)
+        remaining = [error for error in existing.errors if not error in matching] if matching else []
+
+        if matching:
+            yield existing, ErrorsHandler(matching, catch.handler), ErrorsHandler(remaining, existing.handler)
+
+
+def _catch_errors_move_up(catch, existing, group_errors):
+    matching = []
+    for error in group_errors:
+        matches = existing.matching(error)
+        for match in matches:
+            if match and (match != error and issubclass(error, match) or existing.handler != catch.handler):
+                matching.append(error)
+    return matching

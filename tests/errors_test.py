@@ -31,6 +31,15 @@ def _extend_declarations_test():
     assert errors.catches == catches
 
 
+def _add_same_declaration_test():
+    declarations = ((ValueError, TypeError), _one), (BaseException, _raise)
+    errors = ErrorCatches(*declarations)
+
+    errors[(ValueError, Exception)] = _one
+    catches = ((ValueError, TypeError), _one), (Exception, _one), (BaseException, _raise)
+    assert errors.catches == catches
+
+
 def _override_declarations_test():
     errors = ErrorCatches(((ValueError, TypeError), _one), (BaseException, _raise))
 
@@ -44,6 +53,7 @@ def _override_declarations_test():
 def main():
     _errors_mapping_test()
     _extend_declarations_test()
+    _add_same_declaration_test()
     _override_declarations_test()
 
 if __name__ == '__main__':
