@@ -48,84 +48,20 @@ class handle(object):
         return ErrorsHandler(self._errors, handler)
 
 
-class ErrorCatches(object):
-
-    def __init__(self, *errors_handlers):
-        self._catches = CatchList()
-
-        for error_classes, handler in errors_handlers:
-            self[error_classes] = handler
-
-    def __setitem__(self, error_classes, handler):
-        errors_handler = ErrorsHandler(error_classes, handler)
-        self.add(errors_handler)
-
-    def add(self, *errors_handlers):
-        catches = self._update_catches(errors_handlers)
-
-        self._catches = catches
-
-    def override(self, *errors_handlers):
-        declarations = self._update_catches(errors_handlers)
-
-        return self.__class__(*declarations)
-
-    def _update_catches(self, errors_handlers):
-        catches = CatchList(self._catches)
-
-        for catch in errors_handlers:
-            catches.add(catch)
-
-        return catches
-
-    def get(self, error_class):
-        '''If the exception does not match a catch clause than check for parent classes'''
-        return self._catches.get(error_class) or self._resolve_from_base_errors(error_class)
-
-    def handler(self, error_class):
-        catch = self.get(error_class)
-        if catch:
-            return catch.handler
-
-    def _resolve_from_base_errors(self, error):
-        base_errors_catches = self._catches.base_errors(error)
-        if base_errors_catches:
-            return self._catches.get(base_errors_catches[0])
-
-    @property
-    def catches(self):
-        return tuple(self._catches)
-
-    @property
-    def classes(self):
-        return self._catches.classes
-
-    def __str__(self):
-        return '\n'.join((str(declaration) for declaration in self._catches))
-
-    def __copy__(self):
-        copy = self.__class__(*self._catches)
-        return copy
-
-    def copy(self):
-        return copy.copy(self)
-
-
-#Try/catch declarations
 class CatchList(object):
 
     def __init__(self, catches=()):
         self._catches = []
         self._catch_errors = OrderedDict()
-        for catch in catches:
-            self.add(catch)
+        self.add(*catches)
 
-    def add(self, catch):
-        existing_catches = self._match_existing_catches(catch)
-        if existing_catches:
-            self._split_existing(catch, existing_catches)
-        else:
-            self.add_to_bottom(catch)
+    def add(self, *catches):
+        for catch in catches:
+            existing_catches = self._match_existing_catches(catch)
+            if existing_catches:
+                self._split_existing(catch, existing_catches)
+            else:
+                self.add_to_bottom(catch)
 
     def add_to_bottom(self, catch):
         self._catches.append(catch)
@@ -191,6 +127,10 @@ class CatchList(object):
     def classes(self):
         return tuple(sorted(self._catch_errors.keys(), key=lambda e: self._catches.index(self._catch_errors[e])))
 
+    @property
+    def catches(self):
+        return tuple(self._catches)
+
     def __iter__(self):
         return iter(self._catches)
 
@@ -199,6 +139,9 @@ class CatchList(object):
 
     def __contains__(self, catch):
         return catch in self._catches
+
+    def __str__(self):
+        return '\n'.join((str(declaration) for declaration in self._catches))
 
 
 def _base_errors(error_class):
@@ -223,3 +166,48 @@ def _catch_errors_move_up(catch, existing, group_errors):
             if match and (match != error and issubclass(error, match) or existing.handler != catch.handler):
                 matching.append(error)
     return matching
+
+
+#Try/catch declarations
+class ErrorCatches(CatchList):
+
+    def __init__(self, *catches):
+        super(ErrorCatches, self).__init__((ErrorsHandler(errors, handler) for errors, handler in catches))
+
+    def __setitem__(self, error_classes, handler):
+        errors_handler = ErrorsHandler(error_classes, handler)
+        self.add(errors_handler)
+
+    def override(self, *errors_handlers):
+        declarations = self._update_catches(errors_handlers)
+
+        return self.__class__(*declarations)
+
+    def _update_catches(self, errors_handlers):
+        catches = CatchList(self)
+
+        for catch in errors_handlers:
+            catches.add(catch)
+
+        return catches
+
+    def get(self, error_class):
+        '''If the exception does not match a catch clause than check for parent classes'''
+        return super(ErrorCatches, self).get(error_class) or self._resolve_from_base_errors(error_class)
+
+    def handler(self, error_class):
+        catch = self.get(error_class)
+        if catch:
+            return catch.handler
+
+    def _resolve_from_base_errors(self, error):
+        base_errors_catches = self.base_errors(error)
+        if base_errors_catches:
+            return super(ErrorCatches, self).get(base_errors_catches[0])
+
+    def __copy__(self):
+        copy = self.__class__(self._catches)
+        return copy
+
+    def copy(self):
+        return copy.copy(self)
