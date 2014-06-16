@@ -40,53 +40,57 @@ class ErrorsHandler(namedtuple('ErrorHandlers', ['errors', 'handler']), ErrorMat
 
 
 class handle(object):
-    def __init__(self, error, *errors):
-        self._errors = (error, ) + errors
+    def __init__(self, *errors):
+        assert errors
+        self._errors = errors
 
     def doing(self, handler):
         return ErrorsHandler(self._errors, handler)
 
 
-class CatchClauses(object):
+class ErrorCatches(object):
 
     def __init__(self, *errors_handlers):
-        self._catches = []
-        self._error_handlers = OrderedDict()
+        self._catches = CatchList()
 
         for error_classes, handler in errors_handlers:
-            self._add(ErrorsHandler(error_classes, handler))
+            self[error_classes] = handler
 
-        self._lookups = set()
+    def __setitem__(self, error_classes, handler):
+        errors_handler = ErrorsHandler(error_classes, handler)
+        self.add(errors_handler)
 
-    def _add(self, *errors_handlers):
-        for errors_handler in errors_handlers:
-            if not errors_handlers in self._catches:
-                self._catches.append(errors_handler)
-                self._add_errors_handler(errors_handler)
+    def add(self, *errors_handlers):
+        catches = self._update_catches(errors_handlers)
 
-    def _add_errors_handler(self, errors_handler):
-        for error_class in errors_handler.errors:
-            self._error_handlers[error_class] = errors_handler
+        self._catches = catches
+
+    def override(self, *errors_handlers):
+        declarations = self._update_catches(errors_handlers)
+
+        return self.__class__(*declarations)
+
+    def _update_catches(self, errors_handlers):
+        catches = CatchList(self._catches)
+
+        for catch in errors_handlers:
+            catches.add(catch)
+
+        return catches
 
     def get(self, error_class):
-        return self._error_handlers.get(error_class) or self._resolve_mro_mapping(error_class)
+        '''If the exception does not match a catch clause than check for parent classes'''
+        return self._catches.get_handler(error_class) or self._resolve_from_base_errors(error_class)
 
-    def _resolve_mro_mapping(self, error):
-        if not error in self._lookups:
-            base_handlers = OrderedDict(((error, self._error_handlers[error]) for error in self._base_errors(error)))
-            if base_handlers:
-                self._error_handlers.update(base_handlers)
-                self._lookups.update(base_handlers.keys())
-                handler = base_handlers.values()[0]
-                self._lookups.add(error)
-                self._error_handlers[error] = handler
-                return handler
+    def handler(self, error_class):
+        catch = self.get(error_class)
+        if catch:
+            return catch.handler
 
-    def _base_errors(self, error):
-        '''Resolve a mapping to an exception in the same order errors are listed'''
-        error_mro = (error_class for error_class in _base_errors(error) if error_class in self._error_handlers)
-        catches = self._error_handlers.keys()
-        return sorted(error_mro, key=lambda e: catches.index(e))
+    def _resolve_from_base_errors(self, error):
+        base_errors_catches = self._catches.base_errors(error)
+        if base_errors_catches:
+            return self._catches.get_handler(base_errors_catches[0])
 
     @property
     def catches(self):
@@ -97,47 +101,46 @@ class CatchClauses(object):
 
     def __copy__(self):
         copy = self.__class__(*self._catches)
-        copy._error_handlers = dict(self._error_handlers)
-        copy._lookups = set(self._lookups)
         return copy
 
     def copy(self):
         return copy.copy(self)
 
 
-class ErrorCatches(CatchClauses):
+#Try/catch declarations
+class CatchList(object):
 
-    def __init__(self, *errors_handlers):
-        super(ErrorCatches, self).__init__(*errors_handlers)
+    def __init__(self, catches=()):
+        self._catches = []
+        self._catch_errors = OrderedDict()
+        for catch in catches:
+            self.add(catch)
 
-    def __setitem__(self, error_classes, handler):
-        errors_handler = ErrorsHandler(error_classes, handler)
-        self._add(errors_handler)
+    def add(self, catch):
+        existing_catches = self._match_existing_catches(catch)
+        if existing_catches:
+            self._split_existing(catch, existing_catches)
+        else:
+            self.add_to_bottom(catch)
 
-    def _add(self, *errors_handlers):
-        catches = self._update_catches(errors_handlers)
-        new_declarations = [handler for handler in catches if not handler in self._catches]
+    def add_to_bottom(self, catch):
+        self._catches.append(catch)
+        for error_class in catch.errors:
+            if not error_class in self._catch_errors:
+                self._catch_errors[error_class] = catch
 
-        self._catches = catches
-        for errors_handler in new_declarations:
-            self._add_errors_handler(errors_handler)
+    def _split_existing(self, catch, existing_catches):
+        for existing, matching, remaining in _iterate_matching_catches(catch, existing_catches):
+            position = self._catches.index(existing)
 
-    def override(self, *errors_handlers):
-        declarations = self._update_catches(errors_handlers)
-
-        return self.__class__(*declarations)
-
-    def _update_catches(self, errors_handlers):
-        catches = list(self._catches)
-
-        for errors_handler in errors_handlers:
-            existing_catches = self._match_existing_catches(errors_handler)
-            if existing_catches:
-                catches = _split_existing_catches(catches, errors_handler, existing_catches)
+            if remaining.errors:
+                self._catches[position] = remaining
+                self._catches = self._catches[:position] + [matching] + self._catches[position:]
             else:
-                catches.append(errors_handler)
+                self._catches[position] = matching
 
-        return catches
+            for error_class in matching.errors:
+                self._catch_errors[error_class] = matching
 
     def _match_existing_catches(self, catch):
         errors_definition = self._get_existing_handlers(catch.errors)
@@ -162,32 +165,36 @@ class ErrorCatches(CatchClauses):
 
         return existing_handlers
 
+    def get_handler(self, error_class):
+        return self._catch_errors.get(error_class)
+
     def _get_error_handler(self, error_class):
-        error_definition = self._error_handlers.get(error_class)
+        error_definition = self._catch_errors.get(error_class)
 
         if not error_definition:
-            for base_error in self._base_errors(error_class):
-                error_definition = self._error_handlers.get(base_error)
+            for base_error in self.base_errors(error_class):
+                error_definition = self._catch_errors.get(base_error)
                 if error_definition:
                     return error_definition
         return error_definition
 
+    def base_errors(self, error):
+        '''Resolve a mapping to an exception in the same order errors are listed'''
+        error_mro = (error_class for error_class in _base_errors(error) if error_class in self._catch_errors)
+        return sorted(error_mro, key=lambda e: self._catches.index(self._catch_errors[e]))
+
+    def __iter__(self):
+        return iter(self._catches)
+
+    def __len__(self):
+        return len(self._catches)
+
+    def __contains__(self, catch):
+        return catch in self._catches
+
 
 def _base_errors(error_class):
     return (cls for cls in inspect.getmro(error_class) if issubclass(cls, BaseException))
-
-
-def _split_existing_catches(catches, catch, existing_catches):
-    for existing, matching, remaining in _iterate_matching_catches(catch, existing_catches):
-        position = catches.index(existing)
-
-        if remaining.errors:
-            catches[position] = remaining
-            catches = catches[:position] + [matching] + catches[position:]
-        else:
-            catches[position] = matching
-
-    return catches
 
 
 def _iterate_matching_catches(catch, existing_catches):

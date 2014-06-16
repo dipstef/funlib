@@ -6,13 +6,13 @@ from .retries import try_times
 from .errors import ErrorCatches, handle
 
 
-class FunctionRetryBase(FunctionCall):
+class RetryOnErrors(FunctionCall):
 
-    def __init__(self, fun, result_check=None):
-        super(FunctionRetryBase, self).__init__(fun)
+    def __init__(self, fun, catches=None, result_check=None):
+        super(RetryOnErrors, self).__init__(fun)
 
         self._result_check = result_check
-        self._error_classes = ErrorCatches(handle(Exception).doing(nothing))
+        self._error_classes = ErrorCatches(*catches or handle(Exception).doing(nothing))
 
     def _call_fun(self, *args, **kwargs):
         call_attempt = Attempts(self._fun, *args, **kwargs)
@@ -26,19 +26,10 @@ class FunctionRetryBase(FunctionCall):
         return not self._result_check or self._result_check(result)
 
 
-class RetryOnErrors(FunctionRetryBase):
-
-    def __init__(self, fun, handlers, result_check=None):
-        super(RetryOnErrors, self).__init__(fun, result_check)
-
-        self._error_classes = ErrorCatches(*handlers)
-
-
-class FunctionRetry(FunctionRetryBase):
+class FunctionRetry(RetryOnErrors):
 
     def __init__(self, fun, result_check=None, on_err=nothing, errors=(Exception,)):
-        super(FunctionRetry, self).__init__(fun, result_check)
-        self._error_classes = ErrorCatches(handle(*errors).doing(on_err))
+        super(FunctionRetry, self).__init__(fun, (handle(*errors).doing(on_err), ), result_check)
 
 
 @decorator
