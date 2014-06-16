@@ -86,12 +86,32 @@ def _override_declarations_test():
     assert errors2.handler(StandardError) == nothing
 
 
+def _move_up_catch_test():
+    errors = ErrorCatches(handle(UnicodeDecodeError, UnicodeEncodeError).doing(_one))
+
+    errors.add(ErrorsHandler(ValueError, _raise))
+
+    assert errors.catches == (((UnicodeDecodeError, UnicodeEncodeError), _one), (ValueError, _raise))
+
+    errors = ErrorCatches(handle(UnicodeDecodeError, UnicodeEncodeError).doing(_one))
+
+    errors.top(handle(ValueError).doing(_raise))
+
+    assert errors.catches == ((ValueError, _raise), ((UnicodeDecodeError, UnicodeEncodeError), _one))
+
+    errors = ErrorCatches(((UnicodeDecodeError, UnicodeEncodeError), _one), )
+    errors.top(handle(UnicodeDecodeError).doing(_raise))
+
+    assert errors.catches == ((UnicodeDecodeError, _raise), (UnicodeEncodeError, _one))
+
+
 def main():
     _errors_mapping_test()
     _extend_declarations_test()
     _add_same_declaration_test()
     _update_declarations_test()
     _override_declarations_test()
+    _move_up_catch_test()
 
 if __name__ == '__main__':
     main()

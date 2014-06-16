@@ -56,10 +56,11 @@ class CatchList(object):
         self.add(*catches)
 
     def add(self, *catches):
+        '''Move catch clauses with lower class hiearchy on top of their base classes.'''
         for catch in catches:
-            existing_catches = self._match_existing_catches(catch)
+            existing_catches = _get_existing_catches(catch, self._get_errors_catches(catch.errors))
             if existing_catches:
-                self._split_existing(catch, existing_catches)
+                self._split_existing(_error_or_base_catches(catch, existing_catches))
             else:
                 self.add_to_bottom(catch)
 
@@ -69,8 +70,29 @@ class CatchList(object):
             if not error_class in self._catch_errors:
                 self._catch_errors[error_class] = catch
 
-    def _split_existing(self, catch, existing_catches):
-        for existing, matching, remaining in _iterate_matching_catches(catch, existing_catches):
+    def top(self, *catches):
+        '''Move catch clauses with higher class hiearchy on top of their sub classes.'''
+        for catch in catches:
+            existing_catches = _get_existing_catches(catch, self._get_subclasses_catches(catch.errors))
+            if existing_catches:
+                self._split_existing(_error_or_subclasses_catches(catch, existing_catches))
+            else:
+                self.add_to_bottom(catch)
+
+    def _get_subclasses_catches(self, errors):
+        base_handlers = OrderedDict()
+
+        for error_class in self.classes:
+            catch = self._catch_errors[error_class]
+            base_handlers[error_class] = catch
+            for base_error in _base_errors(error_class):
+                if base_error in errors and not base_error in base_handlers:
+                    base_handlers[base_error] = catch
+
+        return base_handlers
+
+    def _split_existing(self, matching_catches):
+        for existing, matching, remaining in matching_catches:
             position = self._catches.index(existing)
 
             if remaining.errors:
@@ -82,23 +104,11 @@ class CatchList(object):
             for error_class in matching.errors:
                 self._catch_errors[error_class] = matching
 
-    def _match_existing_catches(self, catch):
-        errors_definition = self._get_existing_handlers(catch.errors)
-
-        existing_handlers = itertools.groupby(catch.errors, key=lambda x: errors_definition.get(x))
-
-        existing_catches = []
-        for existing, group in existing_handlers:
-            if existing:
-                existing_catches.append((existing, list(group)))
-
-        return existing_catches
-
-    def _get_existing_handlers(self, errors):
+    def _get_errors_catches(self, errors):
         existing_handlers = OrderedDict()
 
         for error_class in errors:
-            declaration = self._get_error_handler(error_class)
+            declaration = self._get_base_error_catch(error_class)
 
             if declaration:
                 existing_handlers[error_class] = declaration
@@ -108,7 +118,7 @@ class CatchList(object):
     def get(self, error_class):
         return self._catch_errors.get(error_class)
 
-    def _get_error_handler(self, error_class):
+    def _get_base_error_catch(self, error_class):
         error_definition = self._catch_errors.get(error_class)
 
         if not error_definition:
@@ -148,9 +158,24 @@ def _base_errors(error_class):
     return (cls for cls in inspect.getmro(error_class) if issubclass(cls, BaseException))
 
 
-def _iterate_matching_catches(catch, existing_catches):
+def _get_existing_catches(catch, catches):
+    existing_handlers = itertools.groupby(catch.errors, key=lambda x: catches.get(x))
+
+    existing_catches = []
+    for existing, group in existing_handlers:
+        if existing:
+            existing_catches.append((existing, list(group)))
+
+    return existing_catches
+
+
+def _error_or_base_catches(catch, existing_catches):
+    return iter(_match_catches(catch, existing_catches, matcher=_base_classes_or_diff_handler))
+
+
+def _match_catches(catch, existing_catches, matcher):
     for existing, group_errors in existing_catches:
-        matching = _catch_errors_move_up(catch, existing, group_errors)
+        matching = matcher(catch, existing, group_errors)
 
         remaining = [error for error in existing.errors if not error in matching] if matching else []
 
@@ -158,13 +183,25 @@ def _iterate_matching_catches(catch, existing_catches):
             yield existing, ErrorsHandler(matching, catch.handler), ErrorsHandler(remaining, existing.handler)
 
 
-def _catch_errors_move_up(catch, existing, group_errors):
+def _error_or_subclasses_catches(catch, existing_catches):
+    return iter(_match_catches(catch, existing_catches, matcher=_sub_classes_or_diff_handler))
+
+
+def _base_classes_or_diff_handler(catch, existing, group_errors):
     matching = []
     for error in group_errors:
-        matches = existing.matching(error)
-        for match in matches:
-            if match and (match != error and issubclass(error, match) or existing.handler != catch.handler):
+        catch_errors_matching = existing.matching(error)
+        for catch_error in catch_errors_matching:
+            if existing.handler != catch.handler or not catch_error == error:
                 matching.append(error)
+    return matching
+
+
+def _sub_classes_or_diff_handler(catch, existing, group_errors):
+    matching = []
+    for error in group_errors:
+        if not error in existing.errors or catch.handler != existing.handler:
+            matching.append(error)
     return matching
 
 
