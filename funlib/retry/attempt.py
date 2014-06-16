@@ -76,18 +76,14 @@ class Attempts(Function):
 
             if result_validator and not result_validator(attempt.result):
                 raise ResultValidationError(attempt.result, result_validator)
-        except BaseException, e:
+        except catches.classes, e:
             catch = catches.get(e.__class__)
 
-            self._error_counts.update(catch.errors if catch else (e, ))
+            self._error_counts.update(catch.errors)
             error_count = self._error_counts[e.__class__]
 
             attempt = FailedAttempt(self._fun, e, error_count, catch, self.attempts, self.started, call_time, utc.now())
-
-            if not catch:
-                raise e
-            elif catch.handler:
-                catch.handler(attempt)
+            attempt.handle_error()
 
         self._calls.append(attempt)
 

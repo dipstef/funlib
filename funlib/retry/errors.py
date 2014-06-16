@@ -80,7 +80,7 @@ class ErrorCatches(object):
 
     def get(self, error_class):
         '''If the exception does not match a catch clause than check for parent classes'''
-        return self._catches.get_handler(error_class) or self._resolve_from_base_errors(error_class)
+        return self._catches.get(error_class) or self._resolve_from_base_errors(error_class)
 
     def handler(self, error_class):
         catch = self.get(error_class)
@@ -90,11 +90,15 @@ class ErrorCatches(object):
     def _resolve_from_base_errors(self, error):
         base_errors_catches = self._catches.base_errors(error)
         if base_errors_catches:
-            return self._catches.get_handler(base_errors_catches[0])
+            return self._catches.get(base_errors_catches[0])
 
     @property
     def catches(self):
         return tuple(self._catches)
+
+    @property
+    def classes(self):
+        return self._catches.classes
 
     def __str__(self):
         return '\n'.join((str(declaration) for declaration in self._catches))
@@ -165,7 +169,7 @@ class CatchList(object):
 
         return existing_handlers
 
-    def get_handler(self, error_class):
+    def get(self, error_class):
         return self._catch_errors.get(error_class)
 
     def _get_error_handler(self, error_class):
@@ -182,6 +186,10 @@ class CatchList(object):
         '''Resolve a mapping to an exception in the same order errors are listed'''
         error_mro = (error_class for error_class in _base_errors(error) if error_class in self._catch_errors)
         return sorted(error_mro, key=lambda e: self._catches.index(self._catch_errors[e]))
+
+    @property
+    def classes(self):
+        return tuple(sorted(self._catch_errors.keys(), key=lambda e: self._catches.index(self._catch_errors[e])))
 
     def __iter__(self):
         return iter(self._catches)
