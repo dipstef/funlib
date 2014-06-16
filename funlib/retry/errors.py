@@ -68,21 +68,6 @@ class CatchClauses(object):
         for error_class in errors_handler.errors:
             self._error_handlers[error_class] = errors_handler
 
-    def _get_existing_handlers(self, errors):
-        existing_handlers = OrderedDict()
-
-        for error_class in errors:
-            declaration = self._get_error_handler(error_class)
-
-            if declaration:
-                existing_handlers[error_class] = declaration
-
-        return existing_handlers
-
-    def _get_error_handler(self, error_class):
-        declaration = self._error_handlers.get(error_class)
-        return declaration
-
     def get(self, error_class):
         return self._error_handlers.get(error_class) or self._resolve_mro_mapping(error_class)
 
@@ -130,10 +115,10 @@ class ErrorCatches(CatchClauses):
         self._add(errors_handler)
 
     def _add(self, *errors_handlers):
-        declarations = self._update_catches(errors_handlers)
-        new_declarations = [handler for handler in declarations if not handler in self._catches]
+        catches = self._update_catches(errors_handlers)
+        new_declarations = [handler for handler in catches if not handler in self._catches]
 
-        self._catches = declarations
+        self._catches = catches
         for errors_handler in new_declarations:
             self._add_errors_handler(errors_handler)
 
@@ -143,15 +128,16 @@ class ErrorCatches(CatchClauses):
         return self.__class__(*declarations)
 
     def _update_catches(self, errors_handlers):
-        declarations = list(self._catches)
+        catches = list(self._catches)
+
         for errors_handler in errors_handlers:
             existing_catches = self._match_existing_catches(errors_handler)
             if existing_catches:
-                declarations = _split_existing_catches(declarations, errors_handler, existing_catches)
+                catches = _split_existing_catches(catches, errors_handler, existing_catches)
             else:
-                declarations.append(errors_handler)
+                catches.append(errors_handler)
 
-        return declarations
+        return catches
 
     def _match_existing_catches(self, catch):
         errors_definition = self._get_existing_handlers(catch.errors)
@@ -165,11 +151,23 @@ class ErrorCatches(CatchClauses):
 
         return existing_catches
 
+    def _get_existing_handlers(self, errors):
+        existing_handlers = OrderedDict()
+
+        for error_class in errors:
+            declaration = self._get_error_handler(error_class)
+
+            if declaration:
+                existing_handlers[error_class] = declaration
+
+        return existing_handlers
+
     def _get_error_handler(self, error_class):
-        error_definition = super(ErrorCatches, self)._get_error_handler(error_class)
+        error_definition = self._error_handlers.get(error_class)
+
         if not error_definition:
             for base_error in self._base_errors(error_class):
-                error_definition = super(ErrorCatches, self)._get_error_handler(base_error)
+                error_definition = self._error_handlers.get(base_error)
                 if error_definition:
                     return error_definition
         return error_definition
@@ -179,17 +177,17 @@ def _base_errors(error_class):
     return (cls for cls in inspect.getmro(error_class) if issubclass(cls, BaseException))
 
 
-def _split_existing_catches(declarations, errors_handler, existing_catches):
-    for existing, matching, remaining in _iterate_matching_catches(errors_handler, existing_catches):
-        position = declarations.index(existing)
+def _split_existing_catches(catches, catch, existing_catches):
+    for existing, matching, remaining in _iterate_matching_catches(catch, existing_catches):
+        position = catches.index(existing)
 
         if remaining.errors:
-            declarations[position] = remaining
-            declarations = declarations[:position] + [matching] + declarations[position:]
+            catches[position] = remaining
+            catches = catches[:position] + [matching] + catches[position:]
         else:
-            declarations[position] = matching
+            catches[position] = matching
 
-    return declarations
+    return catches
 
 
 def _iterate_matching_catches(catch, existing_catches):
