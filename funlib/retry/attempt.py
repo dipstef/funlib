@@ -1,5 +1,6 @@
 import sys
-from collections import namedtuple, Counter
+
+from collections import Counter
 from dated.normalized import utc
 from .. import LambdaFunction, Function
 
@@ -37,12 +38,16 @@ class CompletedAttempt(Attempt):
 
 class FailedAttempt(Attempt):
 
-    def __init__(self, fun_call, error, error_count, catch_clause, number, start_time, call_time, end_time):
+    def __init__(self, fun_call, error, error_count, catch, number, start_time, call_time, end_time):
         super(FailedAttempt, self).__init__(fun_call, number, start_time, call_time, end_time)
         self.result = None
         self.error = error
         self.error_count = error_count
-        self.catch_clause = catch_clause
+        self.catch = catch
+
+    def handle_error(self):
+        if self.catch.handler:
+            self.catch.handler(self)
 
     def outcome(self):
         self.raise_cause()
@@ -63,21 +68,30 @@ class Attempts(Function):
         self._calls = []
         self._error_counts = Counter()
 
-    def __call__(self, catch=(BaseException, )):
+    def __call__(self, catches, result_validator=None):
         call_time = self._new_attempt()
 
         try:
-            result = self._fun()
+            attempt = CompletedAttempt(self._fun, self._fun(), self.attempts, self.started, call_time, utc.now())
 
-            result = CompletedAttempt(self._fun, result, self.attempts, self.started, call_time, utc.now())
-        except catch, e:
-            self._error_counts.update(catch)
-            error_count = self._error_counts[catch]
-            result = FailedAttempt(self._fun, e, error_count, catch, self.attempts, self.started, call_time, utc.now())
+            if result_validator and not result_validator(attempt.result):
+                raise ResultValidationError(attempt.result, result_validator)
+        except BaseException, e:
+            catch = catches.get(e.__class__)
 
-        self._calls.append(result)
+            self._error_counts.update(catch.errors if catch else (e, ))
+            error_count = self._error_counts[e.__class__]
 
-        return result
+            attempt = FailedAttempt(self._fun, e, error_count, catch, self.attempts, self.started, call_time, utc.now())
+
+            if not catch:
+                raise e
+            elif catch.handler:
+                catch.handler(attempt)
+
+        self._calls.append(attempt)
+
+        return attempt
 
     def _new_attempt(self):
         call_time = utc.now()
@@ -97,3 +111,10 @@ class Attempts(Function):
             return str(self.last_call)
         else:
             return str(self._fun)
+
+
+class ResultValidationError(Exception):
+
+    def __init__(self, result, validator):
+        self.result = result
+        self.validator = validator

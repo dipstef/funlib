@@ -15,3 +15,7 @@ def instance_fun(instance, fun):
     def call_fun(*args, **kwargs):
         return fun(instance, *args, **kwargs)
     return call_fun
+
+
+def nothing(*args, **kwargs):
+    pass

@@ -4,42 +4,103 @@ import inspect
 import itertools
 
 
-class ErrorClassHandling(object):
+class CatchClauses(object):
 
     def __init__(self, *errors_handlers):
-        self._declarations = []
-        self._handlers_declaration = OrderedDict()
-        self._error_mappings = OrderedDict()
-        self._mro_mappings = OrderedDict()
+        self._catches = []
+        self._error_handlers = OrderedDict()
 
         for error_classes, handler in errors_handlers:
-            self[error_classes] = handler
+            self._add(ErrorsHandler(error_classes, handler))
 
         self._lookups = set()
 
-    def __setitem__(self, error_classes, handler):
-        errors_handler = ErrorsHandler(error_classes, handler)
-        self.add(errors_handler)
-
-    def add(self, *errors_handlers):
+    def _add(self, *errors_handlers):
         for errors_handler in errors_handlers:
-            if not errors_handlers in self._declarations:
-                self._declarations.append(errors_handler)
+            if not errors_handlers in self._catches:
+                self._catches.append(errors_handler)
                 self._add_errors_handler(errors_handler)
 
     def _add_errors_handler(self, errors_handler):
         for error_class in errors_handler.errors:
-            self._error_mappings[error_class] = errors_handler.handler
-            self._mro_mappings[error_class] = errors_handler.handler
-            self._handlers_declaration[error_class] = errors_handler
+            self._error_handlers[error_class] = errors_handler
+
+    def _get_existing_handlers(self, errors):
+        existing_handlers = OrderedDict()
+
+        for error_class in errors:
+            declaration = self._get_error_handler(error_class)
+
+            if declaration:
+                existing_handlers[error_class] = declaration
+
+        return existing_handlers
+
+    def _get_error_handler(self, error_class):
+        declaration = self._error_handlers.get(error_class)
+        return declaration
+
+    def get(self, error_class):
+        return self._error_handlers.get(error_class) or self._resolve_mro_mapping(error_class)
+
+    def _resolve_mro_mapping(self, error):
+        if not error in self._lookups:
+            base_handlers = OrderedDict(((error, self._error_handlers[error]) for error in self._base_errors(error)))
+            if base_handlers:
+                self._error_handlers.update(base_handlers)
+                self._lookups.update(base_handlers.keys())
+                handler = base_handlers.values()[0]
+                self._lookups.add(error)
+                self._error_handlers[error] = handler
+                return handler
+
+    def _base_errors(self, error):
+        '''Resolve a mapping to an exception in the same order errors are listed'''
+        error_mro = (error_class for error_class in _base_errors(error) if error_class in self._error_handlers)
+        catches = self._error_handlers.keys()
+        return sorted(error_mro, key=lambda e: catches.index(e))
+
+    @property
+    def catches(self):
+        return tuple(self._catches)
+
+    def __str__(self):
+        return '\n'.join((str(declaration) for declaration in self._catches))
+
+    def __copy__(self):
+        copy = self.__class__(*self._catches)
+        copy._error_handlers = dict(self._error_handlers)
+        copy._lookups = set(self._lookups)
+        return copy
+
+    def copy(self):
+        return copy.copy(self)
+
+
+class ErrorCatches(CatchClauses):
+
+    def __init__(self, *errors_handlers):
+        super(ErrorCatches, self).__init__(*errors_handlers)
+
+    def __setitem__(self, error_classes, handler):
+        errors_handler = ErrorsHandler(error_classes, handler)
+        self._add(errors_handler)
+
+    def _add(self, *errors_handlers):
+        declarations = self._update_catches(errors_handlers)
+        new_declarations = [handler for handler in declarations if not handler in self._catches]
+
+        self._catches = declarations
+        for errors_handler in new_declarations:
+            self._add_errors_handler(errors_handler)
 
     def override(self, *errors_handlers):
-        declarations = self._update_declarations(errors_handlers)
+        declarations = self._update_catches(errors_handlers)
 
         return self.__class__(*declarations)
 
-    def _update_declarations(self, errors_handlers):
-        declarations = list(self._declarations)
+    def _update_catches(self, errors_handlers):
+        declarations = list(self._catches)
         for errors_handler in errors_handlers:
             errors_definition = self._get_existing_handlers(errors_handler.errors)
 
@@ -62,68 +123,6 @@ class ErrorClassHandling(object):
                     declarations.append(errors_handler)
 
         return declarations
-
-    def _get_existing_handlers(self, errors):
-        existing_handlers = OrderedDict()
-
-        for error_class in errors:
-            declaration = self._get_error_handler(error_class)
-
-            if declaration:
-                existing_handlers[error_class] = declaration
-
-        return existing_handlers
-
-    def _get_error_handler(self, error_class):
-        declaration = self._handlers_declaration.get(error_class)
-        return declaration
-
-    def get(self, error_class):
-        return self._mro_mappings.get(error_class) or self._resolve_mro_mapping(error_class)
-
-    def _resolve_mro_mapping(self, error):
-        if not error in self._lookups:
-            self._lookups.add(error)
-            error_mappings = OrderedDict(((error, self._mro_mappings[error]) for error in self._base_errors(error)))
-            return error_mappings.get(error)
-
-    def _base_errors(self, error):
-        return (error_class for error_class in _base_errors(error) if error_class in self._error_mappings)
-
-    @property
-    def classes(self):
-        return tuple(self._error_mappings.keys())
-
-    @property
-    def declarations(self):
-        return tuple(self._declarations)
-
-    def __str__(self):
-        return '\n'.join((str(declaration) for declaration in self._declarations))
-
-    def __copy__(self):
-        copy = self.__class__(*self._declarations)
-        copy._mro_mappings = dict(self._mro_mappings)
-        copy._lookups = set(self._lookups)
-        return copy
-
-    def copy(self):
-        return copy.copy(self)
-
-    def new_from(self):
-        pass
-
-
-class ErrorCatches(ErrorClassHandling):
-
-    def __init__(self, *errors_handlers):
-        super(ErrorCatches, self).__init__(*errors_handlers)
-
-    def _base_errors(self, error):
-        '''Resolve a mapping to an exception in the same order errors are listed'''
-        error_mro = super(ErrorCatches, self)._base_errors(error)
-        catches = self._error_mappings.keys()
-        return sorted(error_mro, key=lambda e: catches.index(e))
 
     def _get_error_handler(self, error_class):
         error_definition = super(ErrorCatches, self)._get_error_handler(error_class)
