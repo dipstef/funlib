@@ -87,22 +87,45 @@ def _override_declarations_test():
 
 
 def _move_up_catch_test():
-    errors = ErrorCatches(handle(UnicodeDecodeError, UnicodeEncodeError).doing(_one))
+    catches = ErrorCatches(handle(UnicodeDecodeError, UnicodeEncodeError).doing(_one))
 
+    errors = catches.copy()
     errors.add(ErrorsHandler(ValueError, _raise))
 
     assert errors.catches == (((UnicodeDecodeError, UnicodeEncodeError), _one), (ValueError, _raise))
 
-    errors = ErrorCatches(handle(UnicodeDecodeError, UnicodeEncodeError).doing(_one))
+    errors = catches.copy()
 
     errors.top(handle(ValueError).doing(_raise))
 
     assert errors.catches == ((ValueError, _raise), ((UnicodeDecodeError, UnicodeEncodeError), _one))
 
-    errors = ErrorCatches(((UnicodeDecodeError, UnicodeEncodeError), _one), )
+    errors = catches.copy()
     errors.top(handle(UnicodeDecodeError).doing(_raise))
 
     assert errors.catches == ((UnicodeDecodeError, _raise), (UnicodeEncodeError, _one))
+
+
+def _remove_catches_test():
+    catches = ErrorCatches(handle(UnicodeDecodeError, UnicodeEncodeError).doing(_one))
+    catches.append(handle(UnicodeDecodeError).doing(_raise))
+
+    errors = catches.copy()
+
+    assert errors.handler(UnicodeDecodeError) == _one
+
+    assert errors.remove_error(UnicodeDecodeError) == (handle(UnicodeDecodeError).doing(_one),
+                                                       handle(UnicodeDecodeError).doing(_raise))
+    assert errors.get(UnicodeEncodeError) == handle(UnicodeEncodeError).doing(_one)
+
+    errors = catches.copy()
+    errors.remove_catch(handle(UnicodeDecodeError, UnicodeEncodeError).doing(_one))
+    assert errors.handler(UnicodeDecodeError) == _raise
+
+    errors = catches.copy()
+    errors.remove_catch(handle(UnicodeDecodeError).doing(_one))
+    assert errors.handler(UnicodeEncodeError) == _one
+    assert errors.handler(UnicodeDecodeError) == _raise
 
 
 def main():
@@ -112,6 +135,7 @@ def main():
     _update_declarations_test()
     _override_declarations_test()
     _move_up_catch_test()
+    _remove_catches_test()
 
 if __name__ == '__main__':
     main()

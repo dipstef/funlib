@@ -1,4 +1,5 @@
 from dated.date_time import seconds
+import time
 from funlib.util import call_string
 from funlib.cached import cached_property, cached
 
@@ -23,6 +24,8 @@ def main():
 
     a = A()
     print a.boo
+    print a.boo
+    time.sleep(1)
     print a.boo
 
     print a.post()
