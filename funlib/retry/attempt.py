@@ -76,7 +76,7 @@ class Attempts(Function):
 
             if result_validator and not result_validator(attempt.result):
                 raise ResultValidationError(attempt.result, result_validator)
-        except catches.classes, e:
+        except catches.errors, e:
             catch = catches.get(e.__class__)
 
             self._error_counts.update(catch.errors)

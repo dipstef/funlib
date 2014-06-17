@@ -1,9 +1,9 @@
+from catches import catch, handle
 from .. import FunctionCall
 from .attempt import Attempts
 from ..decorator import decorator
 from ..util import nothing
 from .retries import try_times
-from .errors import ErrorCatches, handle
 
 
 class RetryOnErrors(FunctionCall):
@@ -12,7 +12,7 @@ class RetryOnErrors(FunctionCall):
         super(RetryOnErrors, self).__init__(fun)
 
         self._result_check = result_check
-        self._error_classes = ErrorCatches(*catches or handle(Exception).doing(nothing))
+        self._error_classes = catch(*catches or handle(Exception).doing(nothing))
 
     def _call_fun(self, *args, **kwargs):
         call_attempt = Attempts(self._fun, *args, **kwargs)
