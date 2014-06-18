@@ -3,10 +3,9 @@ Funlib
 
 Collection of function classes and decorators
 
-Examples
-========
+Decorators
+==========
 
-Decorators:
 
 .. code-block:: python
 
@@ -46,8 +45,8 @@ and decorate class methods:
             return 7
 
     numbers = Numbers()
-    assert numbers.nine() == 9
-    assert numbers.ten() == 10
+    assert numbers.nine() is 9
+    assert numbers.ten() is 10
 
 and work with properties:
 
@@ -68,35 +67,36 @@ and work with properties:
             return 9
 
     numbers = Numbers()
-    assert numbers.eleven == 11
-    assert numbers.twelve == 12
+    assert numbers.eleven is 11
+    assert numbers.twelve is 12
 
 calling class decorators work exactly the same:
 
 .. code-block:: python
 
-    @decorator
-    class add(object):
-        def __init__(self, value=2):
+    class add(Decorator):
+        def __init__(self, fun, value=2):
+            super(add, self).__init__(fun)
             self._value = value
-    
-        def __call__(self, fun):
-            def add_fun(*args, **kwargs):
-                return fun(*args, **kwargs) + self._value
-    
-            return add_fun
-            
-            
+
+        def __call__(self, *args, **kwargs):
+            return self._fun(*args, **kwargs) + self._value
+
+
 But can be sub-classed:
 
 .. code-block:: python
 
 
     class plus5(add):
-        def __init__(self):
-            super(add5, self).__init__(value=5)
+        def __init__(self, fun):
+            super(add5, self).__init__(fun, value=5)
 
     @plus5
     def seven():
         return 2
-    
+
+    assert seven() is 7
+
+Memoization
+===========
