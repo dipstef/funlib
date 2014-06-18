@@ -203,7 +203,7 @@ Try executing a function a number of times until a value is returned or aborted 
     test(fail(times=3)) Failed attempt: 1, ValueError
     test(fail(times=3)) Failed attempt: 2, ValueError
     test(fail(times=3)) Failed attempt: 3, ValueError
-    '4'
+    4
 
 
 Can handle different of errors using the ``catches`` module
