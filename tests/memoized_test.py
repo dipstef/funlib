@@ -2,7 +2,7 @@ import time
 
 from dated.date_time import seconds
 
-from funlib.cached import cached, memoized, cached_property
+from funlib.cached import cached, cached_property
 
 
 def _test_class():
@@ -20,31 +20,37 @@ def _test_class():
                 return n
             return self.fibonacci(n - 1) + self.fibonacci(n - 2)
 
-    a = Numbers()
-    assert a.fibonacci.__name__ == 'fibonacci'
-    assert 2 == a.two
-    assert 2 == a.two
+    numbers = Numbers()
+    assert numbers.fibonacci.__name__ == 'fibonacci'
+    assert 2 == numbers.two
+    assert 2 == numbers.two
 
-    a.fibonacci(10)
-    print 'Cached', a.fibonacci(10)
+    numbers.fibonacci(10)
+
+    assert numbers.fibonacci.result(10) is 55
     time.sleep(1)
-    print 'Expired'
-    a.fibonacci(10)
+    assert not numbers.fibonacci.result(10)
+    cached_result = numbers.fibonacci.memoized(10)
+    assert cached_result.is_expired()
 
-    print a.fibonacci.get(10)
+    numbers.fibonacci(10)
+
+    #print numbers.fibonacci.memoized(10)
 
 
 def _test_function():
 
-    @memoized
+    @cached
     def fibonacci(n):
-        print 'Fibonacci', n
         if n in (0, 1):
             return n
         return fibonacci(n - 1) + fibonacci(n - 2)
 
-    print fibonacci(10)
-    print fibonacci(10)
+    assert not fibonacci.result(10)
+    assert fibonacci(10) is 55
+    assert fibonacci.result(10) is 55
+
+    #print fibonacci(10)
     print fibonacci(n=10)
     print fibonacci(n=10)
 

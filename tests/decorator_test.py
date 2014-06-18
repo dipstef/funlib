@@ -104,8 +104,7 @@ def _test_decorator_fun():
 
 def _test_decorator_class():
     class add(Decorator):
-        def __init__(self, fun, value=2):
-            super(add, self).__init__(fun)
+        def __init__(self, value=2):
             self._value = value
 
         def __call__(self, *args, **kwargs):

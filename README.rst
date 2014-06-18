@@ -102,3 +102,50 @@ But can be sub-classed:
 
 Memoization
 ===========
+Saves previously computed values
+
+.. code-block:: python
+
+    from funlib.cached import cached
+
+    @cached
+    def fibonacci(n):
+        if n in (0, 1):
+            return n
+        return fibonacci(n - 1) + fibonacci(n - 2)
+
+    assert not fibonacci.result(10)
+    assert fibonacci(10) is 55
+    assert fibonacci.result(10) is 55
+
+
+Which can also expire
+
+.. code-block:: python
+
+
+    @cached(expiration=seconds(1))
+    def fibonacci(self, n):
+        ....
+
+    fibonacci(10)
+    assert fibonacci.result(10) is 55
+    time.sleep(1)
+
+    assert not fibonacci.result(10)
+    cached_result = fibonacci.memoized(10)
+    assert cached_result.is_expired()
+
+As well properties and class methods can also be memoized
+
+.. code-block:: python
+
+    from funlib.cached import cached_property
+
+    class Numbers(object):
+        @cached
+        def one():
+            return 1
+        @cached_property
+        def two(self):
+            return 2

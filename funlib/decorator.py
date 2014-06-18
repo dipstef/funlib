@@ -51,6 +51,9 @@ class DecoratorBase(object):
     def __str__(self):
         return str(self._fun)
 
+    def __getattr__(self, item):
+        return getattr(self._fun, item)
+
 
 class Decorator(DecoratorBase):
 
@@ -58,7 +61,8 @@ class Decorator(DecoratorBase):
         if _is_func_arg(*args, **kwargs):
             decorator = super(Decorator, cls).__new__(cls)
             decorator.__init__()
-            return NoArgsDecorator(decorator, args[0])
+            decorator.decorates(args[0])
+            return NoArgsDecorator(decorator)
         else:
             def args_decorator(fun):
                 decorator = super(Decorator, cls).__new__(cls)
@@ -70,15 +74,18 @@ class Decorator(DecoratorBase):
 
 
 class NoArgsDecorator(DecoratorBase):
-    def __init__(self, decorator, fun):
-        self._decorator = decorator
-        self._decorator.decorates(fun)
+    def __init__(self, fun_decorator):
+        self.decorates(fun_decorator)
+        self._decorator = fun_decorator
 
     def __get__(self, instance, owner):
         return self._decorator.__get__(instance, owner)
 
     def __call__(self, *args, **kwargs):
         return self._decorator(*args, **kwargs)
+
+    def __getattr__(self, item):
+        return getattr(self._decorator, item)
 
 
 class property_decorator(object):
