@@ -1,7 +1,7 @@
 Funlib
 ======
 
-Collection of function classes and decorators
+Collection of functions and decorators categorized for different problems.
 
 Decorators
 ==========
@@ -29,8 +29,8 @@ can take optional arguments:
     def eight():
         return 5
 
-    assert seven() is 7
-    assert eight() is 8
+    >>> assert seven() is 7
+    >>> assert eight() is 8
 
 and decorate class methods:
 
@@ -45,8 +45,8 @@ and decorate class methods:
             return 7
 
     numbers = Numbers()
-    assert numbers.nine() is 9
-    assert numbers.ten() is 10
+    >>> assert numbers.nine() is 9
+    >>> assert numbers.ten() is 10
 
 and work with properties:
 
@@ -67,8 +67,8 @@ and work with properties:
             return 9
 
     numbers = Numbers()
-    assert numbers.eleven is 11
-    assert numbers.twelve is 12
+    >>> assert numbers.eleven is 11
+    >>> assert numbers.twelve is 12
 
 calling class decorators work exactly the same:
 
@@ -98,7 +98,7 @@ But can be sub-classed:
     def seven():
         return 2
 
-    assert seven() is 7
+    >>> assert seven() is 7
 
 Memoization
 ===========
@@ -114,9 +114,9 @@ Saves previously computed values
             return n
         return fibonacci(n - 1) + fibonacci(n - 2)
 
-    assert not fibonacci.result(10)
-    assert fibonacci(10) is 55
-    assert fibonacci.result(10) is 55
+    >>> assert not fibonacci.result(10)
+    >>> assert fibonacci(10) is 55
+    >>> assert fibonacci.result(10) is 55
 
 
 Which can also expire
@@ -128,13 +128,13 @@ Which can also expire
     def fibonacci(self, n):
         ....
 
-    fibonacci(10)
-    assert fibonacci.result(10) is 55
-    time.sleep(1)
+    >>> fibonacci(10)
+    >>> assert fibonacci.result(10) is 55
+    >>> time.sleep(1)
 
-    assert not fibonacci.result(10)
-    cached_result = fibonacci.memoized(10)
-    assert cached_result.is_expired()
+    >>> assert not fibonacci.result(10)
+    >>> cached_result = fibonacci.memoized(10)
+    >>> assert cached_result.is_expired()
 
 As well properties and class methods can also be memoized
 
@@ -149,3 +149,20 @@ As well properties and class methods can also be memoized
         @cached_property
         def two(self):
             return 2
+
+Timeouts
+========
+
+.. code-block:: python
+
+    from funlib.timeout import timeout
+
+    @timeout(sleep=0.1)
+    def foo():
+        time.sleep(sleep)
+        return 'foo'
+
+    >>> foo()
+    'foo'
+    >>> foo(sleep=2)
+    TimeoutError('Function call timed out')

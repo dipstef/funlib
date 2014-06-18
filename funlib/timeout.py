@@ -4,9 +4,9 @@ from .decorator import decorator
 
 
 @decorator
-def timeout(func, seconds, error_message='Function call timed out'):
+def timeout(func, seconds):
     def _handle_timeout(signum, frame):
-        raise TimeoutError(error_message)
+        raise TimeoutError('Function call timed out')
 
     def timeout_execute(*args, **kwargs):
         signal.signal(signal.SIGALRM, _handle_timeout)
