@@ -199,6 +199,10 @@ Try executing a function a number of times until a value is returned or aborted 
     def test(attempt):
         return attempt()
 
+Fails three times at the forth the result is returned
+
+.. code-block:: python
+
     >>> test(_fail(times=3))
     test(fail(times=3)) Failed attempt: 1, ValueError
     test(fail(times=3)) Failed attempt: 2, ValueError
