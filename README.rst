@@ -12,20 +12,20 @@ Decorators
     from funlib import decorator
 
     @decorator
-    def plus2(fun, plus=0):
+    def add(fun, value=2):
         def add_fun(*args, **kwargs):
-            return fun(*args, **kwargs) + 2 + plus
+            return fun(*args, **kwargs) + value
         return add_fun
 
 can take optional arguments:
 
 .. code-block:: python
 
-    @plus2
+    @add
     def seven():
         return 5
 
-    @plus2(plus=1)
+    @add(value=3)
     def eight():
         return 5
 
@@ -37,10 +37,10 @@ and decorate class methods:
 .. code-block:: python
 
     class Numbers(object):
-        @plus2
+        @add
         def nine(self):
             return 7
-        @plus2(plus=1)
+        @add(value=3)
         def ten(self):
             return 7
 
@@ -54,8 +54,8 @@ and work with properties:
 
     from funlib.decorator import property_decorator
 
-    property_plus_2 = property_decorator(plus2)
-    property_plus_3 = property_decorator(plus2(plus=1))
+    property_plus_2 = property_decorator(add)
+    property_plus_3 = property_decorator(add(value=3))
 
     class Numbers(object):
         @property_plus_2
@@ -78,9 +78,9 @@ calling class decorators work exactly the same:
         def _decorate(self, fun, args, kwargs):
             return fun(*args, **kwargs) + 2
 
-    class plus2(Decorator):
-        def __init__(self, plus=0):
-            self._value = 2 + plus
+    class add(Decorator):
+        def __init__(self, value=2):
+            self._value = value
 
         def _decorate(self, fun, args, kwargs):
             return fun(*args, **kwargs) + self._value
@@ -90,9 +90,9 @@ But can be sub-classed:
 
 .. code-block:: python
 
-    class plus5(plus2):
-        def __init__(self):
-            super(plus5, self).__init__(fun, plus=3)
+    class plus5(add):
+        def __init__(self, fun):
+            super(add5, self).__init__(fun, value=5)
 
     @plus5
     def seven():
