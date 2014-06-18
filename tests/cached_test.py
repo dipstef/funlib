@@ -6,10 +6,10 @@ from funlib.cached import cached_property, cached
 
 def main():
 
-    class A(object):
+    class Memoizing(object):
         @cached_property(expiration=seconds(1))
         def boo(self):
-            print 'Calculating Boo'
+            print 'Booing'
             return 1
 
         @cached
@@ -22,7 +22,7 @@ def main():
             print 'Fooing: ', call_string('foo', *args, **kwargs)
             return 3
 
-    a = A()
+    a = Memoizing()
     print a.boo
     print a.boo
     time.sleep(1)
@@ -35,7 +35,7 @@ def main():
     print a.foo(1, 2)
     print a.foo(3, 4)
 
-    a = A()
+    a = Memoizing()
     print a.foo(1, 2)
 
 

@@ -1,30 +1,37 @@
-from funlib.decorator import property_decorator
-from funlib.cached import cached, memoized
+import time
+
+from dated.date_time import seconds
+
+from funlib.cached import cached, memoized, cached_property
 
 
 def _test_class():
 
-    class A(object):
-        @cached
+    class Numbers(object):
+        @cached_property
+        def two(self):
+            print 'Computing Two'
+            return 2
+
+        @cached(expiration=seconds(1))
         def fibonacci(self, n):
             print 'Fibonacci', n
             if n in (0, 1):
                 return n
             return self.fibonacci(n - 1) + self.fibonacci(n - 2)
 
-        @property_decorator(cached)
-        def two(self):
-            print 'Computing Two'
-            return 2
-
-    a = A()
+    a = Numbers()
     assert a.fibonacci.__name__ == 'fibonacci'
-
     assert 2 == a.two
     assert 2 == a.two
 
     a.fibonacci(10)
+    print 'Cached', a.fibonacci(10)
+    time.sleep(1)
+    print 'Expired'
     a.fibonacci(10)
+
+    print a.fibonacci.get(10)
 
 
 def _test_function():

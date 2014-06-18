@@ -1,4 +1,4 @@
-from funlib.decorator import decorator, property_decorator
+from funlib.decorator import Decorator, decorator, property_decorator
 
 
 def _test(add):
@@ -6,7 +6,6 @@ def _test(add):
     @add
     def sum_plus2(x, y):
         return x + y
-
 
     @add(value=5)
     def sum_plus5(x, y):
@@ -104,22 +103,20 @@ def _test_decorator_fun():
 
 
 def _test_decorator_class():
-    @decorator
-    class add(object):
-        def __init__(self, value=2):
+    class add(Decorator):
+        def __init__(self, fun, value=2):
+            super(add, self).__init__(fun)
             self._value = value
 
-        def __call__(self, fun):
-            def add_fun(*args, **kwargs):
-                return fun(*args, **kwargs) + self._value
-            return add_fun
+        def __call__(self, *args, **kwargs):
+            return self._fun(*args, **kwargs) + self._value
 
     _test(add)
 
 
 def main():
-    _test_decorator_fun()
     _test_decorator_class()
+    _test_decorator_fun()
 
 if __name__ == '__main__':
     main()
