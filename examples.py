@@ -8,54 +8,53 @@ def add(fun, value=2):
     return add_fun
 
 
-class add2(Decorator):
+class plus2(Decorator):
 
     def _decorate(self, fun, args, kwargs):
         return fun(*args, **kwargs) + 2
 
+@plus2
+def five():
+    return 3
 
-class add(Decorator):
-    def __init__(self, value=2):
-        self._value = value
+assert five() is 5
+
+
+class plus2(Decorator):
+    def __init__(self, plus=0):
+        self._value = 2 + plus
 
     def _decorate(self, fun, args, kwargs):
         return fun(*args, **kwargs) + self._value
 
-
-@add2
-def five():
-    return 3
-
-@add
+@plus2
 def seven():
     return 5
 
-
-@add(value=3)
+@plus2(plus=1)
 def eight():
     return 5
 
-assert five() is 5
 assert seven() is 7
 assert eight() is 8
 
 
 class Numbers(object):
-    @add
+    @plus2
     def nine(self):
         return 7
 
-    @add(value=3)
+    @plus2(plus=3)
     def ten(self):
-        return 7
+        return 5
 
 numbers = Numbers()
 assert numbers.nine() is 9
 assert numbers.ten() is 10
 
 
-property_plus_2 = property_decorator(add)
-property_plus_3 = property_decorator(add(value=3))
+property_plus_2 = property_decorator(plus2)
+property_plus_3 = property_decorator(plus2(plus=1))
 
 
 class Numbers(object):
@@ -72,12 +71,12 @@ assert numbers.eleven is 11
 assert numbers.twelve is 12
 
 
-class add5(add):
+class plus5(plus2):
     def __init__(self):
-        super(add5, self).__init__(value=5)
+        super(plus5, self).__init__(plus=3)
 
 
-@add5
+@plus5
 def seven():
     return 2
 
