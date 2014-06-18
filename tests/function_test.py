@@ -1,6 +1,6 @@
 # coding=utf-8
 from unicoder import encoded, decoded
-from funlib import LambdaFunction
+from funlib import Lambda
 from funlib.util import call_string
 
 
@@ -18,9 +18,9 @@ def main():
             print str(fun)
             print unicode(fun)
 
-    func = LambdaFunction(encoded,  u'Документ Microsoft Word.doc')
+    func = Lambda(encoded,  u'Документ Microsoft Word.doc')
     _test_fun(func)
-    _test_fun(LambdaFunction(decoded, func()))
+    _test_fun(Lambda(decoded, func()))
 
 if __name__ == '__main__':
     main()

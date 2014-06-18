@@ -166,3 +166,60 @@ Timeouts
     'foo'
     >>> foo(sleep=2)
     TimeoutError('Function call timed out')
+
+Retrying
+========
+Try executing a function a number of times until a value is returned or aborted after a number of attempts.
+
+.. code-block:: python
+
+    from funlib import Lambda
+    from funlib.retry import retry, try_times
+    from funlib.retry.sleep import sleep
+
+    def _print_attempt(attempt):
+        print attempt
+
+    def _fail(times=10):
+        attempts = []
+
+        def fail(times):
+            attempts.append(len(attempts))
+            attempted = len(attempts)
+
+            if attempted <= times:
+                raise ValueError(attempted)
+
+            return attempted
+
+        return Lambda(fail, times=times)
+
+
+    @retry(times=4, on_err=_print_attempt, sleep=sleep(1))
+    def test(attempt):
+        return attempt()
+
+    >>> test(_fail(times=3))
+    test(fail(times=3)) Failed attempt: 1, ValueError
+    test(fail(times=3)) Failed attempt: 2, ValueError
+    test(fail(times=3)) Failed attempt: 3, ValueError
+    '4'
+
+
+Can handle different of errors using the ``catches`` module
+
+.. code-block:: python
+
+    from funlib.retry import retry_on_errors, try_times, handle
+    from funlib.retry.sleep import sleep, random_sleep, incremental_sleep
+
+    @retry_on_errors(handle(ValueError).doing(try_times(2, on_err=_print_attempt, sleep=sleep(1))),
+                     handle(StandardError).doing(try_times(2, on_err=_print_attempt, sleep=incremental_sleep(1))),
+                     handle(BaseException).doing(try_times(10, on_err=_print_attempt, sleep=random_sleep(1, to=2))))
+    def test(attempt):
+        return attempt()
+
+    >>> test(_fail(times=3))
+    test(fail(times=3)) Failed attempt: 1, ValueError
+    test(fail(times=3)) Failed attempt: 2, ValueError
+    ValueError('2')

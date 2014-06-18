@@ -2,7 +2,7 @@ import sys
 
 from collections import Counter
 from dated.normalized import utc
-from .. import LambdaFunction, Function
+from .. import Lambda, Function
 
 
 class Attempt(object):
@@ -56,13 +56,13 @@ class FailedAttempt(Attempt):
         raise self.error, None, sys.exc_info()[2]
 
     def __str__(self):
-        return '%s Failed: %s: %s' % (str(self.call), self.number, self.error.__class__.__name__)
+        return '%s Failed attempt: %s, %s' % (str(self.call), self.number, self.error.__class__.__name__)
 
 
 class Attempts(Function):
 
     def __init__(self, fun, *args, **kwargs):
-        super(Attempts, self).__init__(LambdaFunction(fun, *args, **kwargs))
+        super(Attempts, self).__init__(Lambda(fun, *args, **kwargs))
         self.attempts = 0
         self.started = None
         self._calls = []

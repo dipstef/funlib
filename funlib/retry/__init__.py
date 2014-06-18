@@ -1,7 +1,8 @@
 from catches import catch, handle
+
 from .. import FunctionCall
 from .attempt import Attempts
-from ..decorator import decorator
+from ..decorator import Decorator
 from ..util import nothing
 from .retries import try_times
 
@@ -22,9 +23,6 @@ class RetryOnErrors(FunctionCall):
             if not outcome.error:
                 return outcome.result
 
-    def _validate_result(self, result):
-        return not self._result_check or self._result_check(result)
-
 
 class FunctionRetry(RetryOnErrors):
 
@@ -32,26 +30,26 @@ class FunctionRetry(RetryOnErrors):
         super(FunctionRetry, self).__init__(fun, (handle(*errors).doing(on_err), ), result_check)
 
 
-@decorator
-def retry(fun, times, on_err=nothing, sleep=None, result_check=None, on_errors=(Exception, )):
-    def retry_call(*args, **kwargs):
-        err_fun = kwargs.pop('on_err', on_err)
+class retry(Decorator):
 
-        handler = try_times(times, err_fun, sleep=sleep)
-        retry_fun = FunctionRetry(fun, on_err=handler, result_check=result_check, errors=on_errors)
+    def __init__(self, times, on_err=nothing, sleep=None, result_check=None, on_errors=(Exception, )):
+        self._handler = try_times(times, on_err, sleep=sleep)
+        self._result_check = result_check
+        self._on_errors = on_errors
 
+    def _decorate(self, fun, args, kwargs):
+        err_fun = kwargs.pop('on_err', self._handler)
+
+        fun = FunctionRetry(fun, on_err=err_fun, result_check=self._result_check, errors=self._on_errors)
+        return fun(*args, **kwargs)
+
+
+class retry_on_errors(Decorator):
+
+    def __init__(self, *error_handlers, **checks):
+        self._error_handlers = error_handlers
+        self._result_check = checks.pop('result', None)
+
+    def _decorate(self, fun, args, kwargs):
+        retry_fun = RetryOnErrors(fun, self._error_handlers, self._result_check)
         return retry_fun(*args, **kwargs)
-
-    return retry_call
-
-
-@decorator
-def retry_on_errors(fun, *error_handlers, **checks):
-    def retry_call(*args, **kwargs):
-        result_check = checks.pop('result', None)
-
-        retry_fun = RetryOnErrors(fun, error_handlers, result_check)
-
-        return retry_fun(*args, **kwargs)
-
-    return retry_call

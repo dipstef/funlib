@@ -5,11 +5,11 @@ class FailedAttemptRetries(object):
         self._sleep = sleep
 
     def __call__(self, failed_attempt):
-        if self._should_stop(failed_attempt):
-            failed_attempt.raise_cause()
-
         if self._error_callback:
             self._error_callback(failed_attempt)
+
+        if self._should_stop(failed_attempt):
+            failed_attempt.raise_cause()
 
         if self._sleep:
             self._sleep(failed_attempt)

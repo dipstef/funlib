@@ -1,59 +1,53 @@
+from funlib import Lambda
 from funlib.retry import retry, retry_on_errors, try_times, handle
-from funlib.retry.sleep import sleep, random_sleep
-
-
-_attempts = []
+from funlib.retry.sleep import sleep, random_sleep, incremental_sleep
 
 
 def _print_attempt(attempt):
     print attempt
 
 
-def _print_value_error(attempt):
-    print attempt.call, 'Value Error: ', attempt.error
+def _fail(times=10):
+    attempts = []
 
+    def fail(times):
+        attempts.append(len(attempts))
+        attempted = len(attempts)
 
-def _test(i):
-    _attempts.append(i)
-    attempted = len(_attempts)
+        if attempted <= times:
+            raise ValueError(attempted)
 
-    if attempted < 10:
-        raise ValueError(attempted)
+        return attempted
 
-    return i
+    return Lambda(fail, times=times)
 
 
 def _test_no_specific_error():
-    @retry(times=10, on_err=_print_attempt, sleep=sleep(1))
-    def test(i):
-        return _test(i)
 
-    global _attempts
-    _attempts = []
+    @retry(times=4, on_err=_print_attempt, sleep=sleep(1))
+    def test(attempt):
+        return attempt()
 
-    assert test(1) == 1
+    assert test(_fail(times=3)) == 4
 
 
 def _test_on_value_error():
-    @retry_on_errors((ValueError, try_times(10, on_err=_print_value_error, sleep=sleep(1))))
-    def test2(i):
-        return _test(i)
+    @retry_on_errors((ValueError, try_times(4, on_err=_print_attempt, sleep=sleep(1))))
+    def test2(attempt):
+        return attempt()
 
-    global _attempts
-    _attempts = []
-    assert test2(1) == 1
+    assert test2(_fail(times=3)) == 4
 
 
 def _test_on_error_catches():
-    @retry_on_errors(handle(ValueError).doing(try_times(2, on_err=_print_value_error, sleep=sleep(1))),
+    @retry_on_errors(handle(ValueError).doing(try_times(2, on_err=_print_attempt, sleep=sleep(1))),
+                     handle(StandardError).doing(try_times(2, on_err=_print_attempt, sleep=incremental_sleep(1))),
                      handle(BaseException).doing(try_times(10, on_err=_print_attempt, sleep=random_sleep(1, to=2))))
-    def test3(i):
-        return _test(i)
+    def test3(attempt):
+        return attempt()
 
-    global _attempts
-    _attempts = []
     try:
-        test3(1)
+        test3(_fail(times=10))
     except ValueError, e:
         pass
 

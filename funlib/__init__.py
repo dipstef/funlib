@@ -42,10 +42,10 @@ class FunctionCall(Function):
             return super(FunctionCall, self).__str__()
 
 
-class LambdaFunction(Function):
+class Lambda(Function):
 
     def __init__(self, fun, *args, **kwargs):
-        super(LambdaFunction, self).__init__(fun)
+        super(Lambda, self).__init__(fun)
         self.args = args
         self.kwargs = kwargs or {}
 
