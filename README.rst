@@ -29,8 +29,8 @@ can take optional arguments:
     def eight():
         return 5
 
-    assert 7 == seven()
-    assert 8 == eight()
+    assert seven() is 7
+    assert eight() is 8
 
 and decorate class methods:
 
@@ -74,13 +74,18 @@ calling class decorators work exactly the same:
 
 .. code-block:: python
 
+    class plus2(Decorator):
+
+        def _decorate(self, fun, args, kwargs):
+            return fun(*args, **kwargs) + 2
+
+
     class add(Decorator):
-        def __init__(self, fun, value=2):
-            super(add, self).__init__(fun)
+        def __init__(self, value=2):
             self._value = value
 
-        def __call__(self, *args, **kwargs):
-            return self._fun(*args, **kwargs) + self._value
+        def _decorate(self, fun, args, kwargs):
+            return fun(*args, **kwargs) + self._value
 
 
 But can be sub-classed:

@@ -1,3 +1,4 @@
+from abc import abstractmethod
 import functools
 import inspect
 from .util import instance_fun
@@ -25,16 +26,13 @@ def _is_func_arg(*args, **kwargs):
     return len(args) == 1 and len(kwargs) == 0 and (_is_func(args[0]))
 
 
-def property_decorator_(decoration):
-    return property_decorator(decoration)
-
-
 class DecoratorBase(object):
+    _instance = None
+    _fun = None
 
-    def __init__(self, fun):
+    def decorates(self, fun):
         self._fun = fun
         functools.update_wrapper(self, fun)
-        self._instance = None
 
     def __get__(self, instance, owner):
         if not self._instance:
@@ -43,7 +41,12 @@ class DecoratorBase(object):
         return self
 
     def __call__(self, *args, **kwargs):
-        return self._fun(*args, **kwargs)
+        assert self._fun
+        return self._decorate(self._fun, args, kwargs)
+
+    @abstractmethod
+    def _decorate(self, fun, args, kwargs):
+        pass
 
     def __str__(self):
         return str(self._fun)
@@ -53,14 +56,29 @@ class Decorator(DecoratorBase):
 
     def __new__(cls, *args, **kwargs):
         if _is_func_arg(*args, **kwargs):
-            return super(Decorator, cls).__new__(cls, args[0])
+            decorator = super(Decorator, cls).__new__(cls)
+            decorator.__init__()
+            return NoArgsDecorator(decorator, args[0])
         else:
-            def decorator_with_args(fun):
-                klass = super(Decorator, cls).__new__(cls, fun)
-                klass.__init__(fun, *args, **kwargs)
-                return klass
+            def args_decorator(fun):
+                decorator = super(Decorator, cls).__new__(cls)
+                decorator.__init__(*args, **kwargs)
+                decorator.decorates(fun)
+                return decorator
 
-            return decorator_with_args
+        return args_decorator
+
+
+class NoArgsDecorator(DecoratorBase):
+    def __init__(self, decorator, fun):
+        self._decorator = decorator
+        self._decorator.decorates(fun)
+
+    def __get__(self, instance, owner):
+        return self._decorator.__get__(instance, owner)
+
+    def __call__(self, *args, **kwargs):
+        return self._decorator(*args, **kwargs)
 
 
 class property_decorator(object):

@@ -45,8 +45,8 @@ def _test_on_value_error():
 
 
 def _test_on_error_catches():
-    @retry_on_errors(handle(BaseException).doing(try_times(10, on_err=_print_attempt, sleep=random_sleep(1, to=2))),
-                     handle(ValueError).doing(try_times(2, on_err=_print_value_error, sleep=sleep(1))))
+    @retry_on_errors(handle(ValueError).doing(try_times(2, on_err=_print_value_error, sleep=sleep(1))),
+                     handle(BaseException).doing(try_times(10, on_err=_print_attempt, sleep=random_sleep(1, to=2))))
     def test3(i):
         return _test(i)
 

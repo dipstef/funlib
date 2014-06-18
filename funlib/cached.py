@@ -7,13 +7,12 @@ from .decorator import property_decorator, Decorator
 
 class memoized(Decorator):
 
-    def __init__(self, fun):
-        super(memoized, self).__init__(fun)
-        self._calls_cache = {}
+    def __init__(self, calls_cache=None):
+        self._calls_cache = {} if calls_cache is None else calls_cache
 
-    def __call__(self, *args, **kwargs):
+    def _decorate(self, fun, args, kwargs):
         if _hashable_arguments(*args, **kwargs):
-            result = self._get_from_cache_or_execute(self._fun, *args, **kwargs)
+            result = self._get_from_cache_or_execute(fun, *args, **kwargs)
         else:
             result = self._fun(*args, **kwargs)
 
@@ -50,8 +49,8 @@ def _hashable_arguments(*args, **kwargs):
 
 class cached(memoized):
 
-    def __init__(self, fun, expiration=None):
-        super(cached, self).__init__(fun)
+    def __init__(self, expiration=None):
+        super(cached, self).__init__()
         self._expiration = expiration
 
     def _get_cache_result(self, call_key):

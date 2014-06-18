@@ -8,14 +8,23 @@ def add(fun, value=2):
     return add_fun
 
 
+class add2(Decorator):
+
+    def _decorate(self, fun, args, kwargs):
+        return fun(*args, **kwargs) + 2
+
+
 class add(Decorator):
-    def __init__(self, fun, value=2):
-        super(add, self).__init__(fun)
+    def __init__(self, value=2):
         self._value = value
 
-    def __call__(self, *args, **kwargs):
-        return self._fun(*args, **kwargs) + self._value
+    def _decorate(self, fun, args, kwargs):
+        return fun(*args, **kwargs) + self._value
 
+
+@add2
+def five():
+    return 3
 
 @add
 def seven():
@@ -26,8 +35,9 @@ def seven():
 def eight():
     return 5
 
-assert 7 is seven()
-assert 8 is eight()
+assert five() is 5
+assert seven() is 7
+assert eight() is 8
 
 
 class Numbers(object):
@@ -63,8 +73,8 @@ assert numbers.twelve is 12
 
 
 class add5(add):
-    def __init__(self, fun):
-        super(add5, self).__init__(fun, value=5)
+    def __init__(self):
+        super(add5, self).__init__(value=5)
 
 
 @add5
