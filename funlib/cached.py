@@ -43,10 +43,7 @@ class memoized(Decorator):
         return self._get_class_method_cache() if self._instance else self._cache
 
     def _get_class_method_cache(self):
-        try:
-            calls_cache = self._instance._calls_cache
-        except AttributeError:
-            calls_cache = self._instance._calls_cache = {}
+        calls_cache = _instance_calls_cache(self._instance)
 
         fun_cache = calls_cache.get(self.__name__)
         if not fun_cache:
@@ -64,6 +61,11 @@ def _hashable_arguments(*args, **kwargs):
 def _call_key(*args, **kwargs):
     call_key = tuple(list(args) + kwargs.items())
     return call_key
+
+
+def _instance_calls_cache(instance):
+    calls_cache = instance._calls_cache = {} if not '_calls_cache' in instance.__dict__ else instance._calls_cache
+    return calls_cache
 
 
 class cached(memoized):
