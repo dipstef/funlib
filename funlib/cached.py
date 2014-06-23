@@ -33,9 +33,6 @@ class memoized(Decorator):
     def _set_result_to_cache(self, call_key, result):
         self._calls_cache[call_key] = result
 
-    def __str__(self):
-        return str(self._decorated)
-
     @property
     def _calls_cache(self):
         return self._get_class_method_cache() if self._instance else self._cache
