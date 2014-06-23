@@ -100,7 +100,7 @@ class ExpiringResult(namedtuple('ExpiringResult', ('call_key', 'result', 'date',
         return super(ExpiringResult, cls).__new__(cls, call_key, result, datetime.utcnow(), expiration)
 
     def is_expired(self):
-        return utc.now() - self.date > self.expiration
+        return datetime.utcnow() - self.date > self.expiration
 
 #like django.utils.functional import cached_property but allows to define an expiration
 cached_property = property_decorator(cached)

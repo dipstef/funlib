@@ -1,6 +1,7 @@
 from abc import abstractmethod
 import functools
 import inspect
+from .util import method_call
 
 
 def decorator(func):
@@ -67,7 +68,7 @@ class DecoratorBase(object):
 
             def __init__(self, instance):
                 self._instance = instance
-                self._fun = functools.partial(decorated_fun, instance)
+                self._fun = method_call(decorated_fun, instance)
 
             def __new__(cls, *args, **kwargs):
                 method_decorator = object.__new__(cls)

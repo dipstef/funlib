@@ -22,6 +22,7 @@ def _test_class():
 
     numbers = Numbers()
 
+    print numbers.fibonacci
     assert numbers.fibonacci.__name__ == 'fibonacci'
     assert 2 == numbers.two
     assert 2 == numbers.two
