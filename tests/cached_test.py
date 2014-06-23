@@ -1,4 +1,4 @@
-from dated.date_time import seconds
+from dated.timedelta import seconds
 import time
 from funlib.util import call_string
 from funlib.cached import cached_property, cached

@@ -1,7 +1,6 @@
 from abc import abstractmethod
 import functools
 import inspect
-from .util import instance_fun
 
 
 def decorator(func):
@@ -30,15 +29,17 @@ class DecoratorBase(object):
     _instance = None
     _fun = None
 
-    def decorates(self, fun):
+    @property
+    def fun(self):
+        return self._fun
+
+    @fun.setter
+    def fun(self, fun):
         self._fun = fun
         functools.update_wrapper(self, fun)
 
     def __get__(self, instance, owner):
-        if not self._instance:
-            self._fun = instance_fun(instance, self._fun)
-            self._instance = instance
-        return self
+        return self._class_method_decorator(instance)
 
     def __call__(self, *args, **kwargs):
         assert self._fun
@@ -46,13 +47,34 @@ class DecoratorBase(object):
 
     @abstractmethod
     def _decorate(self, fun, args, kwargs):
-        pass
+        raise NotImplementedError
 
     def __str__(self):
         return str(self._fun)
 
     def __getattr__(self, item):
-        return getattr(self._fun, item)
+        if hasattr(self._fun, item):
+            return getattr(self._fun, item)
+        else:
+            raise AttributeError(item)
+
+    @property
+    def _class_method_decorator(self):
+        decorator_class, decorated_fun = self.__class__, self._fun
+
+        class ClassMethodDecorator(decorator_class):
+            __metaclass__ = lambda name, bases, class_dict: type(decorator_class.__name__, bases, class_dict)
+
+            def __init__(self, instance):
+                self._instance = instance
+                self._fun = functools.partial(decorated_fun, instance)
+
+            def __new__(cls, *args, **kwargs):
+                method_decorator = object.__new__(cls)
+                method_decorator.__dict__ = dict(self.__dict__)
+                return method_decorator
+
+        return ClassMethodDecorator
 
 
 class Decorator(DecoratorBase):
@@ -61,21 +83,22 @@ class Decorator(DecoratorBase):
         if _is_func_arg(*args, **kwargs):
             decorator = super(Decorator, cls).__new__(cls)
             decorator.__init__()
-            decorator.decorates(args[0])
+            decorator.fun = args[0]
             return NoArgsDecorator(decorator)
         else:
             def args_decorator(fun):
                 decorator = super(Decorator, cls).__new__(cls)
                 decorator.__init__(*args, **kwargs)
-                decorator.decorates(fun)
+                decorator.fun = fun
                 return decorator
 
         return args_decorator
 
 
 class NoArgsDecorator(DecoratorBase):
+
     def __init__(self, fun_decorator):
-        self.decorates(fun_decorator)
+        self.fun = fun_decorator
         self._decorator = fun_decorator
 
     def __get__(self, instance, owner):
@@ -104,7 +127,6 @@ class PropertyDecorated(object):
 
     def __init__(self, decorated):
         self._decorated = decorated
-        self._instance = None
 
     def __get__(self, instance, owner):
         decorated = self._decorated.__get__(instance, owner)

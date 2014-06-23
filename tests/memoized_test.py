@@ -1,8 +1,8 @@
 import time
 
-from dated.date_time import seconds
+from dated.timedelta import seconds
 
-from funlib.cached import cached, cached_property
+from funlib.cached import cached, cached_property, memoized
 
 
 def _test_class():
@@ -21,6 +21,7 @@ def _test_class():
             return self.fibonacci(n - 1) + self.fibonacci(n - 2)
 
     numbers = Numbers()
+
     assert numbers.fibonacci.__name__ == 'fibonacci'
     assert 2 == numbers.two
     assert 2 == numbers.two

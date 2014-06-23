@@ -8,7 +8,7 @@ from .decorator import property_decorator, Decorator
 class memoized(Decorator):
 
     def __init__(self, calls_cache=None):
-        self._calls_cache = {} if calls_cache is None else calls_cache
+        self._cache = {} if calls_cache is None else calls_cache
 
     def _decorate(self, fun, args, kwargs):
         if _hashable_arguments(*args, **kwargs):
@@ -37,6 +37,21 @@ class memoized(Decorator):
 
     def __str__(self):
         return str(self._decorated)
+
+    @property
+    def _calls_cache(self):
+        return self._get_class_method_cache() if self._instance else self._cache
+
+    def _get_class_method_cache(self):
+        try:
+            calls_cache = self._instance._calls_cache
+        except AttributeError:
+            calls_cache = self._instance._calls_cache = {}
+
+        fun_cache = calls_cache.get(self.__name__)
+        if not fun_cache:
+            fun_cache = calls_cache[self.__name__] = {}
+        return fun_cache
 
     def memoized(self, *args, **kwargs):
         return self._calls_cache.get(_call_key(*args, **kwargs))
@@ -90,5 +105,5 @@ class ExpiringResult(namedtuple('ExpiringResult', ('call_key', 'result', 'date',
     def is_expired(self):
         return utc.now() - self.date > self.expiration
 
-
+#like django.utils.functional import cached_property but allows to define an expiration
 cached_property = property_decorator(cached)

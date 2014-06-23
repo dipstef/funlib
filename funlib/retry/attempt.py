@@ -1,7 +1,7 @@
 import sys
 
 from collections import Counter
-from dated.normalized import utc
+from dated import utc
 from .. import Lambda, Function
 
 
