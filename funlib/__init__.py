@@ -1,4 +1,3 @@
-from unicoder import encoded, decoded
 from .util import call_string
 
 
@@ -15,10 +14,10 @@ class Function(object):
         return self._fun(*args, **kwargs)
 
     def __str__(self):
-        return encoded(self.__name__)
+        return self.__name__
 
     def __unicode__(self):
-        return decoded(str(self))
+        return unicode(str(self))
 
 
 class FunctionCall(Function):

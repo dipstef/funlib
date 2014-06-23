@@ -1,7 +1,5 @@
 from collections import Hashable, namedtuple
-
-from dated import utc
-
+from datetime import datetime
 from .decorator import property_decorator, Decorator
 
 
@@ -93,7 +91,7 @@ class ComputedResult(namedtuple('ComputedResult', ('call_key', 'result', 'date')
         if expiration:
             return ExpiringResult(call_key, result, expiration)
         else:
-            return super(ComputedResult, cls).__new__(cls, call_key, result, utc.now())
+            return super(ComputedResult, cls).__new__(cls, call_key, result, datetime.utcnow())
 
     @staticmethod
     def is_expired():
@@ -102,7 +100,7 @@ class ComputedResult(namedtuple('ComputedResult', ('call_key', 'result', 'date')
 
 class ExpiringResult(namedtuple('ExpiringResult', ('call_key', 'result', 'date', 'expiration'))):
     def __new__(cls, call_key, result, expiration):
-        return super(ExpiringResult, cls).__new__(cls, call_key, result, utc.now(), expiration)
+        return super(ExpiringResult, cls).__new__(cls, call_key, result, datetime.utcnow(), expiration)
 
     def is_expired(self):
         return utc.now() - self.date > self.expiration

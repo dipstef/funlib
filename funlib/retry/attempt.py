@@ -1,18 +1,18 @@
+from datetime import datetime
 import sys
 
 from collections import Counter
-from dated import utc
 from .. import Lambda, Function
 
 
 class Attempt(object):
 
-    def __init__(self, fun_call, number, start_time, call_time, end_time):
+    def __init__(self, fun_call, number, start_time, call_time):
         self.call = fun_call
         self.number = number
         self.start_time = start_time
         self.call_time = call_time
-        self.end_time = end_time
+        self.end_time = datetime.utcnow()
 
     @property
     def attempted(self):
@@ -24,8 +24,8 @@ class Attempt(object):
 
 class CompletedAttempt(Attempt):
 
-    def __init__(self, fun_call, result, number, start_time, call_time, end_time):
-        super(CompletedAttempt, self).__init__(fun_call, number, start_time, call_time, end_time)
+    def __init__(self, fun_call, result, number, start_time, call_time):
+        super(CompletedAttempt, self).__init__(fun_call, number, start_time, call_time)
         self.result = result
         self.error = None
 
@@ -38,8 +38,8 @@ class CompletedAttempt(Attempt):
 
 class FailedAttempt(Attempt):
 
-    def __init__(self, fun_call, error, error_count, catch, number, start_time, call_time, end_time):
-        super(FailedAttempt, self).__init__(fun_call, number, start_time, call_time, end_time)
+    def __init__(self, fun_call, error, error_count, catch, number, start_time, call_time):
+        super(FailedAttempt, self).__init__(fun_call, number, start_time, call_time)
         self.result = None
         self.error = error
         self.error_count = error_count
@@ -72,7 +72,7 @@ class Attempts(Function):
         call_time = self._new_attempt()
 
         try:
-            attempt = CompletedAttempt(self._fun, self._fun(), self.attempts, self.started, call_time, utc.now())
+            attempt = CompletedAttempt(self._fun, self._fun(), self.attempts, self.started, call_time)
 
             if result_validator and not result_validator(attempt.result):
                 raise ResultValidationError(attempt.result, result_validator)
@@ -82,7 +82,7 @@ class Attempts(Function):
             self._error_counts.update(catch.errors)
             error_count = self._error_counts[e.__class__]
 
-            attempt = FailedAttempt(self._fun, e, error_count, catch, self.attempts, self.started, call_time, utc.now())
+            attempt = FailedAttempt(self._fun, e, error_count, catch, self.attempts, self.started, call_time)
             attempt.handle_error()
 
         self._calls.append(attempt)
@@ -90,7 +90,7 @@ class Attempts(Function):
         return attempt
 
     def _new_attempt(self):
-        call_time = utc.now()
+        call_time = datetime.utcnow()
 
         if not self.attempts:
             self.started = call_time
