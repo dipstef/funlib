@@ -29,9 +29,9 @@ def _test_class():
 
     numbers.fibonacci(10)
 
-    assert numbers.fibonacci.result(10) is 55
+    assert numbers.fibonacci.in_cache(10) is 55
     time.sleep(1)
-    assert not numbers.fibonacci.result(10)
+    assert not numbers.fibonacci.in_cache(10)
     cached_result = numbers.fibonacci.memoized(10)
     assert cached_result.is_expired()
 
@@ -48,9 +48,9 @@ def _test_function():
             return n
         return fibonacci(n - 1) + fibonacci(n - 2)
 
-    assert not fibonacci.result(10)
+    assert not fibonacci.in_cache(10)
     assert fibonacci(10) is 55
-    assert fibonacci.result(10) is 55
+    assert fibonacci.in_cache(10) is 55
 
     #print fibonacci(10)
     print fibonacci(n=10)

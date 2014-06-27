@@ -129,10 +129,10 @@ Which can also expire
         ....
 
     >>> fibonacci(10)
-    >>> assert fibonacci.result(10) is 55
+    >>> assert fibonacci.in_cache(10) is 55
     >>> time.sleep(1)
 
-    >>> assert not fibonacci.result(10)
+    >>> assert not fibonacci.in_cache(10)
     >>> cached_result = fibonacci.memoized(10)
     >>> assert cached_result.is_expired()
 

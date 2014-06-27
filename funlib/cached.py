@@ -77,7 +77,7 @@ class cached(memoized):
     def _set_result_to_cache(self, call_key, result):
         super(cached, self)._set_result_to_cache(call_key, ComputedResult(call_key, result, self._expiration))
 
-    def result(self, *args, **kwargs):
+    def in_cache(self, *args, **kwargs):
         computed = self.memoized(*args, **kwargs)
         if computed and not computed.is_expired():
             return computed.result
