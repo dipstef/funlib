@@ -114,9 +114,9 @@ Saves previously computed values
             return n
         return fibonacci(n - 1) + fibonacci(n - 2)
 
-    >>> assert not fibonacci.result(10)
+    >>> assert not fibonacci.in_cache(10)
     >>> assert fibonacci(10) is 55
-    >>> assert fibonacci.result(10) is 55
+    >>> assert fibonacci.in_cache(10) is 55
 
 
 Which can also expire
