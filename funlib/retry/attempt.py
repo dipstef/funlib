@@ -80,7 +80,7 @@ class Attempts(Function):
             catch = catches.get(e.__class__)
 
             self._error_counts.update(catch.errors)
-            error_count = self._error_counts[e.__class__]
+            error_count = self._error_counts[catch.catch]
 
             attempt = FailedAttempt(self._fun, e, error_count, catch, self.attempts, self.started, call_time)
             attempt.handle_error()

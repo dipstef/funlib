@@ -48,6 +48,7 @@ def _test_on_error_catches():
 
     try:
         test3(_fail(times=10))
+        assert False
     except ValueError, e:
         pass
 
