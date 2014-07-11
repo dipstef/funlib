@@ -2,7 +2,7 @@ import time
 
 from dated.timedelta import seconds
 
-from funlib.cached import cached, cached_property, memoized
+from funlib.cached import cached, cached_property
 
 
 def _test_class():

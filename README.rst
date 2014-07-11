@@ -155,7 +155,7 @@ Timeouts
 
 .. code-block:: python
 
-    from funlib.timeout import timeout
+    from funlib.signals import timeout
 
     @timeout(sleep=0.1)
     def foo():

@@ -1,6 +1,5 @@
 import time
-
-from funlib.timeout import timeout, TimeoutError
+from funlib.signals import timeout, CallTimeout
 
 
 @timeout(seconds=1)
@@ -12,7 +11,7 @@ def foo():
 def main():
     try:
         foo()
-    except TimeoutError:
+    except CallTimeout:
         print 'Expired'
 
 if __name__ == '__main__':
