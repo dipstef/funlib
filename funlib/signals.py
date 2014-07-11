@@ -1,3 +1,4 @@
+from functools import wraps
 import signal
 
 from .decorator import decorator
@@ -30,10 +31,11 @@ def raise_signal(sig):
 
 
 @decorator
-def sig_raise(func, sig):
+def sig_raise(fun, sig):
+    @wraps(fun)
     def timeout_execute(*args, **kwargs):
         raise_signal(sig)
-        return func(*args, **kwargs)
+        return fun(*args, **kwargs)
 
     return timeout_execute
 
@@ -42,16 +44,16 @@ def raise_termination():
     return raise_signal(signal.SIGTERM)
 
 @sig_raise(signal.SIGTERM)
-@decorator
-def termination_raise(func):
+def termination_raise(fun):
+    @wraps(fun)
     def timeout_execute(*args, **kwargs):
-        return func(*args, **kwargs)
+        return fun(*args, **kwargs)
 
     return timeout_execute
 
 
 @decorator
-def timeout(func, seconds):
+def timeout(fun, seconds):
     def _handle_timeout(signum, frame):
         raise CallTimeout('Function call timed out')
 
@@ -59,7 +61,7 @@ def timeout(func, seconds):
         signal.signal(signal.SIGALRM, _handle_timeout)
         signal.alarm(seconds)
         try:
-            result = func(*args, **kwargs)
+            result = fun(*args, **kwargs)
         finally:
             signal.alarm(0)
         return result
