@@ -14,7 +14,7 @@ class Signal(Exception):
 class Termination(Signal):
     def __init__(self, traceback):
         super(Termination, self).__init__(signal.SIGKILL, traceback)
-        self.message = 'SIGKILL %d' % self.signal
+        self.message = 'SIGTERM %d' % self.signal
 
 
 class SigRaise(Signal):
@@ -43,9 +43,10 @@ def sig_raise(fun, sig):
 def raise_termination():
     return raise_signal(signal.SIGTERM)
 
-@sig_raise(signal.SIGTERM)
+@decorator
 def termination_raise(fun):
     @wraps(fun)
+    @sig_raise(signal.SIGTERM)
     def timeout_execute(*args, **kwargs):
         return fun(*args, **kwargs)
 
